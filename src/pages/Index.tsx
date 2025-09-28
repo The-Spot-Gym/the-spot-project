@@ -93,7 +93,8 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 size="xl"
-                className="border-white text-white hover:bg-white hover:text-primary"
+                className="border-white text-white hover:bg-white hover:text-primary bg-white/10 backdrop-blur-sm"
+                onClick={() => setCurrentView('discover')}
               >
                 <MapPin className="mr-2" />
                 Find Gyms Near Me

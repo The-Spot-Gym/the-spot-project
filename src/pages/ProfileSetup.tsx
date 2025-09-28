@@ -8,6 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+// Import avatar images
+import avatar1 from "@/assets/avatars/avatar-1.png";
+import avatar2 from "@/assets/avatars/avatar-2.png";
+import avatar3 from "@/assets/avatars/avatar-3.png";
+import avatar4 from "@/assets/avatars/avatar-4.png";
+import avatar5 from "@/assets/avatars/avatar-5.png";
+import avatar6 from "@/assets/avatars/avatar-6.png";
+import avatar7 from "@/assets/avatars/avatar-7.png";
+import avatar8 from "@/assets/avatars/avatar-8.png";
+import avatar9 from "@/assets/avatars/avatar-9.png";
+import avatar10 from "@/assets/avatars/avatar-10.png";
+
 const ProfileSetup = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -21,6 +33,21 @@ const ProfileSetup = () => {
     deadlift: "",
     experience: ""
   });
+
+  const [showAvatarSelection, setShowAvatarSelection] = useState(false);
+
+  const avatarOptions = [
+    { id: 1, src: avatar1, name: "Weightlifter" },
+    { id: 2, src: avatar2, name: "Powerlifter" },
+    { id: 3, src: avatar3, name: "Bodybuilder" },
+    { id: 4, src: avatar4, name: "Crossfitter" },
+    { id: 5, src: avatar5, name: "Strongman" },
+    { id: 6, src: avatar6, name: "Trainer" },
+    { id: 7, src: avatar7, name: "Bencher" },
+    { id: 8, src: avatar8, name: "Squatter" },
+    { id: 9, src: avatar9, name: "Olympian" },
+    { id: 10, src: avatar10, name: "Gym Enthusiast" },
+  ];
 
   const fitnessGoalOptions = [
     "Build Muscle", "Lose Weight", "Gain Strength", "Improve Endurance",
@@ -118,12 +145,37 @@ const ProfileSetup = () => {
               size="icon" 
               variant="secondary" 
               className="absolute -bottom-2 -right-2 rounded-full w-8 h-8"
+              onClick={() => setShowAvatarSelection(!showAvatarSelection)}
             >
               <Camera className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">Add a profile picture</p>
+          <p className="text-sm text-muted-foreground">Add a profile picture or choose an avatar</p>
         </div>
+
+        {showAvatarSelection && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-center">Choose an Avatar</h4>
+            <div className="grid grid-cols-5 gap-2">
+              {avatarOptions.map((avatar) => (
+                <div
+                  key={avatar.id}
+                  className={`cursor-pointer rounded-full p-1 transition-all hover:scale-110 ${
+                    profileData.profilePicture === avatar.src ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => {
+                    setProfileData(prev => ({...prev, profilePicture: avatar.src}));
+                    setShowAvatarSelection(false);
+                  }}
+                >
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={avatar.src} alt={avatar.name} />
+                  </Avatar>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
