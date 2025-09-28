@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import heroImage from "@/assets/hero-gym-interior.jpg";
+import heroImage from "@/assets/hero-realistic-gym.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
