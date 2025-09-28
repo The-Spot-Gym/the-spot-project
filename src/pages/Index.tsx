@@ -12,11 +12,7 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  if (!loading && !user) {
-    return <Welcome />;
-  }
-
-  // Fetch user profile when authenticated
+  // Fetch user profile when authenticated - MUST be before any early returns
   useEffect(() => {
     if (user) {
       // TODO: Fetch user profile from Supabase
@@ -28,6 +24,11 @@ const Index = () => {
     await signOut();
     navigate('/auth');
   };
+
+  // Early returns AFTER all hooks are called
+  if (!loading && !user) {
+    return <Welcome />;
+  }
 
   if (loading) {
     return (
