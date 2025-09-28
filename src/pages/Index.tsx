@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import heroImage from "@/assets/hero-fitness.jpg";
+import heroImage from "@/assets/hero-male-student.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -71,7 +71,7 @@ const Index = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-6 left-6 text-white">
-                <h1 className="text-5xl font-bold mb-2">FitConnect</h1>
+                <h1 className="text-5xl font-bold mb-2">The Spot</h1>
                 <p className="text-xl opacity-90">Find Your Gym. Find Your Tribe.</p>
               </div>
             </div>
@@ -155,7 +155,7 @@ const Index = () => {
             <div className="mx-auto w-16 h-16 bg-gradient-secondary rounded-full flex items-center justify-center mb-4">
               <Dumbbell className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl">Join FitConnect</CardTitle>
+            <CardTitle className="text-2xl">Join The Spot</CardTitle>
             <CardDescription>Create your account to start connecting with your fitness community</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -206,7 +206,7 @@ const Index = () => {
             <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-xl">FitConnect</span>
+            <span className="font-bold text-xl">The Spot</span>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">Welcome {username}!</Badge>
