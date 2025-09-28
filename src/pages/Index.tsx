@@ -72,7 +72,7 @@ const Index = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-6 left-6 text-white">
                 <h1 className="text-5xl font-bold mb-2">The Spot</h1>
-                <p className="text-xl opacity-90">Find Your Gym. Find Your Tribe.</p>
+                <p className="text-xl opacity-90">Find Your Gym. Find Your Spot.</p>
               </div>
             </div>
             
