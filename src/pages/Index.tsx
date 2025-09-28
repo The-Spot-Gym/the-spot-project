@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapPin, Users, Trophy, Dumbbell, User, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import heroImage from "@/assets/hero-fitness.jpg";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<'welcome' | 'signup' | 'discover'>('welcome');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,11 +18,11 @@ const Index = () => {
       // Request location permission
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          () => setCurrentView('discover'),
-          () => setCurrentView('discover') // Continue even if location denied
+          () => navigate('/profile-setup'),
+          () => navigate('/profile-setup') // Continue even if location denied
         );
       } else {
-        setCurrentView('discover');
+        navigate('/profile-setup');
       }
     }
   };
@@ -222,7 +224,11 @@ const Index = () => {
 
         <div className="grid gap-6">
           {nearbyGyms.map((gym, index) => (
-            <Card key={index} className="hover:shadow-card transition-all duration-300 cursor-pointer">
+            <Card 
+              key={index} 
+              className="hover:shadow-card transition-all duration-300 cursor-pointer"
+              onClick={() => navigate(`/gym/${gym.name.toLowerCase().replace(/\s+/g, '-')}`)}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">{gym.image}</div>
