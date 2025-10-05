@@ -72,19 +72,29 @@ const Chat = () => {
       // Fetch participants
       const { data: parts, error: partsError } = await supabase
         .from('conversation_participants')
-        .select(`
-          user_id,
-          profiles:user_id (
-            user_id,
-            display_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('user_id')
         .eq('conversation_id', conversationId);
 
       if (partsError) throw partsError;
-      setParticipants(parts || []);
+
+      // Fetch profiles for participants
+      if (parts && parts.length > 0) {
+        const userIds = parts.map(p => p.user_id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combine participants with their profiles
+        const participantsWithProfiles = parts.map(p => ({
+          user_id: p.user_id,
+          profiles: profiles?.find(profile => profile.user_id === p.user_id)
+        }));
+        
+        setParticipants(participantsWithProfiles);
+      }
     } catch (error) {
       console.error('Error fetching conversation:', error);
       toast({
@@ -99,23 +109,39 @@ const Chat = () => {
     if (!conversationId) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: msgs, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          profiles:sender_id (
-            display_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+
+      // Fetch profiles for message senders
+      if (msgs && msgs.length > 0) {
+        const senderIds = [...new Set(msgs.map(m => m.sender_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', senderIds);
+
+        // Attach profiles to messages
+        const messagesWithProfiles = msgs.map(msg => ({
+          ...msg,
+          profiles: profiles?.find(p => p.user_id === msg.sender_id)
+        }));
+        
+        setMessages(messagesWithProfiles);
+      } else {
+        setMessages([]);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat history",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
