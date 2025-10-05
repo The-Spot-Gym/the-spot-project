@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2 } from "lucide-react";
+import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +19,8 @@ const Index = () => {
   const [gyms, setGyms] = useState<any[]>([]);
   const [loadingGyms, setLoadingGyms] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"distance" | "rating">("distance");
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -94,8 +98,48 @@ const Index = () => {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return (R * c).toFixed(1);
+    return R * c; // Return as number for sorting
   };
+
+  // Filter and sort gyms
+  const filteredAndSortedGyms = useMemo(() => {
+    if (!userLocation) return [];
+
+    // Add distance to each gym
+    const gymsWithDistance = gyms.map(gym => ({
+      ...gym,
+      distance: calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        gym.latitude,
+        gym.longitude
+      )
+    }));
+
+    // Filter by search query
+    let filtered = gymsWithDistance;
+    if (searchQuery.trim()) {
+      filtered = gymsWithDistance.filter(gym =>
+        gym.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gym.address?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === "distance") {
+        return a.distance - b.distance;
+      } else if (sortBy === "rating") {
+        // Sort by rating descending (highest first), handle null ratings
+        const ratingA = a.rating || 0;
+        const ratingB = b.rating || 0;
+        return ratingB - ratingA;
+      }
+      return 0;
+    });
+
+    return sorted;
+  }, [gyms, userLocation, searchQuery, sortBy]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -151,21 +195,61 @@ const Index = () => {
           <p className="text-muted-foreground">Discover your perfect fitness community</p>
         </div>
 
+        {/* Search and Filter Bar */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search gyms by name or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+            <Select value={sortBy} onValueChange={(value: "distance" | "rating") => setSortBy(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="distance">Distance</SelectItem>
+                <SelectItem value="rating">Rating</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {loadingGyms ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : gyms.length === 0 ? (
+        ) : filteredAndSortedGyms.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-muted-foreground">No gyms found nearby. Try adjusting your location permissions.</p>
-            <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
-              Retry
-            </Button>
+            {searchQuery ? (
+              <>
+                <p className="text-muted-foreground">No gyms found matching "{searchQuery}"</p>
+                <Button onClick={() => setSearchQuery("")} className="mt-4" variant="outline">
+                  Clear Search
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">No gyms found nearby. Try adjusting your location permissions.</p>
+                <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
+                  Retry
+                </Button>
+              </>
+            )}
           </Card>
         ) : (
           <>
+            <div className="mb-4 text-sm text-muted-foreground">
+              Showing {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </div>
             <div className="grid gap-6">
-              {gyms.map((gym) => (
+              {filteredAndSortedGyms.map((gym) => (
                 <Card 
                   key={gym.id} 
                   className="hover:shadow-card transition-all duration-300 cursor-pointer"
@@ -194,19 +278,12 @@ const Index = () => {
                                   <span>•</span>
                                 </>
                               )}
-                              {userLocation && (
-                                <>
-                                  <span>{calculateDistance(
-                                    userLocation.latitude,
-                                    userLocation.longitude,
-                                    gym.latitude,
-                                    gym.longitude
-                                  )} km away</span>
-                                  <span>•</span>
-                                </>
-                              )}
+                              <span>{gym.distance.toFixed(1)} km away</span>
                               {gym.user_ratings_total && (
-                                <span>{gym.user_ratings_total} reviews</span>
+                                <>
+                                  <span>•</span>
+                                  <span>{gym.user_ratings_total} reviews</span>
+                                </>
                               )}
                             </div>
                             {gym.address && (
