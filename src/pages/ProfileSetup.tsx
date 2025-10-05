@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, User, Dumbbell, Target, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 // Import avatar images
 import avatar1 from "@/assets/avatars/avatar-1.png";
@@ -22,6 +25,8 @@ import avatar10 from "@/assets/avatars/avatar-10.png";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [profileData, setProfileData] = useState({
     profilePicture: "",
@@ -33,8 +38,37 @@ const ProfileSetup = () => {
     deadlift: "",
     experience: ""
   });
+  const [saving, setSaving] = useState(false);
 
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
+
+  // Fetch existing profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setProfileData({
+          profilePicture: data.avatar_url || "",
+          displayName: data.display_name || "",
+          bio: data.bio || "",
+          fitnessGoals: [],
+          benchPress: "",
+          squat: "",
+          deadlift: "",
+          experience: ""
+        });
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const avatarOptions = [
     { id: 1, src: avatar1, name: "Weightlifter" },
@@ -70,12 +104,63 @@ const ProfileSetup = () => {
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete profile setup
+      // Complete profile setup - save to database
+      await saveProfile();
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          avatar_url: profileData.profilePicture,
+          display_name: profileData.displayName,
+          bio: profileData.bio,
+          username: user.user_metadata?.username || profileData.displayName.toLowerCase().replace(/\s+/g, '_'),
+        });
+
+      if (error) throw error;
+
+      // Update leaderboard_stats with PR data if provided
+      if (profileData.benchPress || profileData.squat || profileData.deadlift) {
+        const personalRecords: any = {};
+        if (profileData.benchPress) personalRecords.bench_press = parseInt(profileData.benchPress);
+        if (profileData.squat) personalRecords.squat = parseInt(profileData.squat);
+        if (profileData.deadlift) personalRecords.deadlift = parseInt(profileData.deadlift);
+
+        await supabase
+          .from('leaderboard_stats')
+          .upsert({
+            user_id: user.id,
+            personal_records: personalRecords,
+            favorite_exercise: profileData.fitnessGoals[0] || null,
+          });
+      }
+
+      toast({
+        title: "Profile saved!",
+        description: "Your profile has been successfully updated.",
+      });
+
       navigate('/');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error saving profile",
+        description: "Failed to save your profile. Please try again.",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -337,10 +422,10 @@ const ProfileSetup = () => {
             <Button 
               variant="hero" 
               onClick={handleNext}
-              disabled={!isStepValid()}
+              disabled={!isStepValid() || saving}
               className="bg-white text-primary hover:bg-white/90"
             >
-              {currentStep === 4 ? 'Complete Setup' : 'Next'}
+              {saving ? 'Saving...' : (currentStep === 4 ? 'Complete Setup' : 'Next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

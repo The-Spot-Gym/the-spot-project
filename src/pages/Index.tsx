@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,10 +26,27 @@ const Index = () => {
 
   // Fetch user profile when authenticated
   useEffect(() => {
-    if (user) {
-      // TODO: Fetch user profile from Supabase
-      setUserProfile({ username: 'User', display_name: 'Fitness Enthusiast' });
-    }
+    const fetchProfile = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (data) {
+          setUserProfile(data);
+        } else {
+          // Fallback to user metadata
+          setUserProfile({ 
+            username: user.user_metadata?.username || 'User', 
+            display_name: user.user_metadata?.display_name || user.user_metadata?.full_name || 'Fitness Enthusiast'
+          });
+        }
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
   // Get user location
@@ -196,6 +213,7 @@ const Index = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="w-8 h-8">
+                    {userProfile?.avatar_url && <AvatarImage src={userProfile.avatar_url} />}
                     <AvatarFallback className="bg-gradient-primary text-white">
                       {(userProfile?.display_name?.[0] || userProfile?.username?.[0] || 'U').toUpperCase()}
                     </AvatarFallback>

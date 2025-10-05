@@ -125,6 +125,41 @@ export const useAuth = () => {
     }
   };
 
+  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    try {
+      setLoading(true);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+        }
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Sign in failed",
+          description: error.message
+        });
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('OAuth sign in error:', error);
+      toast({
+        variant: "destructive",
+        title: "Sign in failed",
+        description: "An unexpected error occurred"
+      });
+      return { error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     user,
     session,
@@ -132,5 +167,6 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    signInWithOAuth,
   };
 };
