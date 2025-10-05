@@ -1,24 +1,101 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut } from "lucide-react";
+import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import Welcome from "./Welcome";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
+  const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [gyms, setGyms] = useState<any[]>([]);
+  const [loadingGyms, setLoadingGyms] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Fetch user profile when authenticated - MUST be before any early returns
+  // Fetch user profile when authenticated
   useEffect(() => {
     if (user) {
       // TODO: Fetch user profile from Supabase
       setUserProfile({ username: 'User', display_name: 'Fitness Enthusiast' });
     }
   }, [user]);
+
+  // Get user location
+  useEffect(() => {
+    if (user && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast({
+            title: "Location access denied",
+            description: "Using default location. Please enable location access for better results.",
+            variant: "destructive",
+          });
+          // Default to a location (e.g., New York City)
+          setUserLocation({ latitude: 40.7128, longitude: -74.0060 });
+        }
+      );
+    }
+  }, [user, toast]);
+
+  // Fetch gyms when location is available
+  useEffect(() => {
+    if (userLocation) {
+      fetchNearbyGyms();
+    }
+  }, [userLocation]);
+
+  const fetchNearbyGyms = async () => {
+    if (!userLocation) return;
+
+    setLoadingGyms(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-nearby-gyms', {
+        body: {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          radius: 5000, // 5km radius
+        },
+      });
+
+      if (error) throw error;
+
+      setGyms(data.gyms || []);
+    } catch (error) {
+      console.error('Error fetching gyms:', error);
+      toast({
+        title: "Error loading gyms",
+        description: "Failed to load nearby gyms. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingGyms(false);
+    }
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return (R * c).toFixed(1);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,7 +110,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+        <Loader2 className="h-8 w-8 text-white animate-spin" />
       </div>
     );
   }
@@ -41,36 +118,6 @@ const Index = () => {
   if (!user) {
     return null; // Will redirect to auth
   }
-
-  const nearbyGyms = [
-    {
-      name: "Iron Paradise Gym",
-      rating: 4.8,
-      distance: "0.3 miles",
-      members: 234,
-      topLifter: "Mike Chen",
-      topLift: "405 lbs deadlift",
-      image: "🏋️"
-    },
-    {
-      name: "FitCore Community",
-      rating: 4.6,
-      distance: "0.7 miles", 
-      members: 189,
-      topLifter: "Sarah J.",
-      topLift: "275 lbs squat",
-      image: "💪"
-    },
-    {
-      name: "Strength United",
-      rating: 4.9,
-      distance: "1.2 miles",
-      members: 312,
-      topLifter: "Alex Rivera",
-      topLift: "315 lbs bench",
-      image: "🔥"
-    }
-  ];
 
   // Main authenticated view
   return (
@@ -104,57 +151,87 @@ const Index = () => {
           <p className="text-muted-foreground">Discover your perfect fitness community</p>
         </div>
 
-        <div className="grid gap-6">
-          {nearbyGyms.map((gym, index) => (
-            <Card 
-              key={index} 
-              className="hover:shadow-card transition-all duration-300 cursor-pointer"
-              onClick={() => navigate(`/gym/${gym.name.toLowerCase().replace(/\s+/g, '-')}`)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl">{gym.image}</div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-lg">{gym.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 fill-warning text-warning" />
-                            <span>{gym.rating}</span>
+        {loadingGyms ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : gyms.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground">No gyms found nearby. Try adjusting your location permissions.</p>
+            <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
+              Retry
+            </Button>
+          </Card>
+        ) : (
+          <>
+            <div className="grid gap-6">
+              {gyms.map((gym) => (
+                <Card 
+                  key={gym.id} 
+                  className="hover:shadow-card transition-all duration-300 cursor-pointer"
+                  onClick={() => navigate(`/gym/${gym.id}`)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      {gym.photo_url && (
+                        <img 
+                          src={gym.photo_url} 
+                          alt={gym.name}
+                          className="w-16 h-16 rounded-lg object-cover"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{gym.name}</h3>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              {gym.rating && (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 fill-warning text-warning" />
+                                    <span>{gym.rating}</span>
+                                  </div>
+                                  <span>•</span>
+                                </>
+                              )}
+                              {userLocation && (
+                                <>
+                                  <span>{calculateDistance(
+                                    userLocation.latitude,
+                                    userLocation.longitude,
+                                    gym.latitude,
+                                    gym.longitude
+                                  )} km away</span>
+                                  <span>•</span>
+                                </>
+                              )}
+                              {gym.user_ratings_total && (
+                                <span>{gym.user_ratings_total} reviews</span>
+                              )}
+                            </div>
+                            {gym.address && (
+                              <p className="text-xs text-muted-foreground mt-1">{gym.address}</p>
+                            )}
                           </div>
-                          <span>•</span>
-                          <span>{gym.distance}</span>
-                          <span>•</span>
-                          <span>{gym.members} members</span>
+                          <Button variant="fitness">
+                            View Details
+                          </Button>
                         </div>
                       </div>
-                      <Button variant="fitness">
-                        Join Gym
-                      </Button>
                     </div>
-                    
-                    <div className="bg-muted rounded-lg p-3 mt-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Trophy className="w-4 h-4 text-accent" />
-                        <span className="font-medium">Top Lifter:</span>
-                        <span>{gym.topLifter}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="font-semibold text-accent">{gym.topLift}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-        <div className="mt-8 text-center">
-          <Button variant="outline" size="lg">
-            Load More Gyms
-          </Button>
-        </div>
+            <div className="mt-8 text-center">
+              <Button variant="outline" size="lg" onClick={fetchNearbyGyms} disabled={loadingGyms}>
+                {loadingGyms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Refresh Gyms
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

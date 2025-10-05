@@ -44,6 +44,54 @@ export type Database = {
         }
         Relationships: []
       }
+      gyms: {
+        Row: {
+          address: string | null
+          created_at: string
+          google_place_id: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          phone_number: string | null
+          photo_url: string | null
+          rating: number | null
+          updated_at: string
+          user_ratings_total: number | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          google_place_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          phone_number?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          google_place_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          phone_number?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       leaderboard_stats: {
         Row: {
           created_at: string
