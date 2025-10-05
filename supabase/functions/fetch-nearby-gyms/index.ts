@@ -34,25 +34,46 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Call Google Places API - Nearby Search
-    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=gym&key=${googleApiKey}`;
+    // Call Google Places API - Text Search for better results
+    // Using text search with multiple queries to catch different types of fitness facilities
+    const searchQueries = [
+      'gym',
+      'fitness center',
+      '24 hour fitness',
+      'YMCA',
+      'health club',
+      'crossfit'
+    ];
+
+    const allPlaces = new Map(); // Use Map to avoid duplicates by place_id
     
     console.log('Fetching gyms from Google Places API...');
-    const placesResponse = await fetch(placesUrl);
-    const placesData = await placesResponse.json();
 
-    if (placesData.status !== 'OK' && placesData.status !== 'ZERO_RESULTS') {
-      console.error('Google Places API error:', placesData.status, placesData.error_message);
-      return new Response(
-        JSON.stringify({ error: `Google Places API error: ${placesData.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Search with text queries for more comprehensive results
+    for (const query of searchQueries) {
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
+      
+      const response = await fetch(textSearchUrl);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results) {
+        for (const place of data.results) {
+          // Only add if we haven't seen this place before
+          if (!allPlaces.has(place.place_id)) {
+            allPlaces.set(place.place_id, place);
+          }
+        }
+      } else if (data.status !== 'ZERO_RESULTS') {
+        console.error('Google Places API error:', data.status, data.error_message);
+      }
     }
+
+    console.log(`Found ${allPlaces.size} unique gyms`);
 
     const gyms = [];
 
     // Process each gym result
-    for (const place of placesData.results || []) {
+    for (const place of Array.from(allPlaces.values())) {
       const gymData = {
         google_place_id: place.place_id,
         name: place.name,
