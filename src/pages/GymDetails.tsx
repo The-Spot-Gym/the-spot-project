@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Users, MessageCircle, UserPlus, Clock, Wifi, Car, Shield, Trophy } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Users, MessageCircle, UserPlus, Clock, Wifi, Car, Shield, Trophy, Phone, Globe, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,26 +13,37 @@ import Leaderboard from "@/components/Leaderboard";
 const GymDetails = () => {
   const { gymId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [hasJoined, setHasJoined] = useState(false);
+  const [gymData, setGymData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock gym data - in real app this would come from API based on gymId
-  const gymData = {
-    id: gymId,
-    name: "Iron Paradise Gym",
-    rating: 4.8,
-    distance: "0.3 miles",
-    members: 234,
-    description: "A community-focused gym with top-tier equipment and supportive atmosphere. Perfect for serious lifters and beginners alike.",
-    image: "🏋️",
-    amenities: [
-      { icon: <Clock className="w-4 h-4" />, label: "24/7 Access" },
-      { icon: <Wifi className="w-4 h-4" />, label: "Free WiFi" },
-      { icon: <Car className="w-4 h-4" />, label: "Free Parking" },
-      { icon: <Shield className="w-4 h-4" />, label: "Security System" },
-    ],
-    hours: "24/7 Access Available",
-    address: "123 Fitness Ave, Your City",
-    phone: "(555) 123-4567"
+  useEffect(() => {
+    fetchGymDetails();
+  }, [gymId]);
+
+  const fetchGymDetails = async () => {
+    if (!gymId) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-gym-details', {
+        body: { gymId },
+      });
+
+      if (error) throw error;
+
+      setGymData(data.gym);
+    } catch (error) {
+      console.error('Error fetching gym details:', error);
+      toast({
+        title: "Error loading gym details",
+        description: "Failed to load gym information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const gymMembers = [
@@ -51,6 +64,27 @@ const GymDetails = () => {
     console.log(`Sending friend request to ${memberName}`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!gymData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Gym not found</p>
+          <Button onClick={() => navigate('/')} className="mt-4">
+            Go Back
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -64,16 +98,28 @@ const GymDetails = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{gymData.image}</span>
+            {gymData.photo_url && (
+              <img 
+                src={gymData.photo_url} 
+                alt={gymData.name}
+                className="w-12 h-12 rounded-lg object-cover"
+              />
+            )}
             <div>
               <h1 className="font-bold text-xl">{gymData.name}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-warning text-warning" />
-                  <span>{gymData.rating}</span>
-                </div>
-                <span>•</span>
-                <span>{gymData.distance}</span>
+                {gymData.rating && (
+                  <>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-warning text-warning" />
+                      <span>{gymData.rating}</span>
+                    </div>
+                    <span>•</span>
+                  </>
+                )}
+                {gymData.user_ratings_total && (
+                  <span>{gymData.user_ratings_total} reviews</span>
+                )}
               </div>
             </div>
           </div>
@@ -95,76 +141,163 @@ const GymDetails = () => {
 
       <div className="max-w-6xl mx-auto p-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="members">Members ({gymData.members})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({gymData.reviews?.length || 0})</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>About This Gym</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">{gymData.description}</p>
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-semibold">Amenities</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {gymData.amenities.map((amenity, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          {amenity.icon}
-                          <span>{amenity.label}</span>
+            <div className="grid gap-6">
+              {/* Photos */}
+              {gymData.photos && gymData.photos.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Photos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {gymData.photos.map((photo: string, index: number) => (
+                        <img 
+                          key={index}
+                          src={photo}
+                          alt={`${gymData.name} photo ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Business Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {gymData.address && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{gymData.address}</span>
                         </div>
-                      ))}
+                      )}
+                      
+                      {gymData.phone_number && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4 flex-shrink-0" />
+                          <a href={`tel:${gymData.phone_number}`} className="hover:underline">
+                            {gymData.phone_number}
+                          </a>
+                        </div>
+                      )}
+                      
+                      {gymData.website && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Globe className="w-4 h-4 flex-shrink-0" />
+                          <a 
+                            href={gymData.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="hover:underline truncate"
+                          >
+                            Visit Website
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-semibold">Contact Info</h4>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{gymData.address}</span>
+                    {gymData.opening_hours && (
+                      <div className="space-y-2 pt-4 border-t">
+                        <h4 className="font-semibold flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          Hours
+                        </h4>
+                        {gymData.opening_hours.weekday_text ? (
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            {gymData.opening_hours.weekday_text.map((day: string, index: number) => (
+                              <div key={index}>{day}</div>
+                            ))}
+                          </div>
+                        ) : gymData.opening_hours.open_now !== undefined && (
+                          <Badge variant={gymData.opening_hours.open_now ? "success" : "secondary"}>
+                            {gymData.opening_hours.open_now ? "Open Now" : "Closed"}
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{gymData.hours}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Community Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{gymData.members}</div>
-                      <div className="text-sm text-muted-foreground">Total Members</div>
-                    </div>
-                    <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-success">24</div>
-                      <div className="text-sm text-muted-foreground">Online Now</div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-gradient-primary rounded-lg text-white">
-                    <div className="text-2xl font-bold">4.8</div>
-                    <div className="text-sm opacity-90">Community Rating</div>
-                    <div className="flex justify-center mt-1">
-                      {[1,2,3,4,5].map(star => (
-                        <Star key={star} className="w-4 h-4 fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ratings & Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {gymData.rating && (
+                      <div className="text-center p-6 bg-gradient-primary rounded-lg text-white">
+                        <div className="text-4xl font-bold">{gymData.rating}</div>
+                        <div className="text-sm opacity-90 mt-1">Overall Rating</div>
+                        <div className="flex justify-center mt-2">
+                          {[1,2,3,4,5].map(star => (
+                            <Star 
+                              key={star} 
+                              className={`w-5 h-5 ${star <= Math.round(gymData.rating) ? 'fill-current' : ''}`}
+                            />
+                          ))}
+                        </div>
+                        {gymData.user_ratings_total && (
+                          <div className="text-sm opacity-90 mt-2">
+                            Based on {gymData.user_ratings_total} reviews
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="mt-6">
+            <div className="grid gap-4">
+              {gymData.reviews && gymData.reviews.length > 0 ? (
+                gymData.reviews.map((review: any, index: number) => (
+                  <Card key={index}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Avatar>
+                          <AvatarImage src={review.profile_photo_url} />
+                          <AvatarFallback>{review.author_name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold">{review.author_name}</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {review.relative_time_description}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {[1,2,3,4,5].map(star => (
+                              <Star 
+                                key={star} 
+                                className={`w-4 h-4 ${star <= review.rating ? 'fill-warning text-warning' : 'text-muted'}`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{review.text}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No reviews yet</p>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
