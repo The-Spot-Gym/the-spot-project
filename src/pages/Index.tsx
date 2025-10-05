@@ -148,9 +148,9 @@ const Index = () => {
     } else {
       // If not searching, filter out low-quality gyms
       filtered = gymsWithDistance.filter(gym => {
-        // Filter out gyms with less than 10 reviews OR 1 star or less
-        const hasEnoughReviews = !gym.user_ratings_total || gym.user_ratings_total >= 10;
-        const hasDecentRating = !gym.rating || gym.rating > 1.0;
+        // Must have at least 10 reviews AND rating must be above 1.0
+        const hasEnoughReviews = gym.user_ratings_total && gym.user_ratings_total >= 10;
+        const hasDecentRating = gym.rating && gym.rating > 1.0;
         return hasEnoughReviews && hasDecentRating;
       });
     }
