@@ -176,6 +176,33 @@ const Index = () => {
     navigate('/auth');
   };
 
+  const handleCreateTestFriend = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await supabase.functions.invoke('create-test-friend', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.error) throw response.error;
+
+      toast({
+        title: "Test friend created!",
+        description: "Alex Thompson is now your friend. Check Messages to chat!"
+      });
+    } catch (error) {
+      console.error('Error creating test friend:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create test friend",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Early returns AFTER all hooks are called
   if (!loading && !user) {
     return <Welcome />;
@@ -237,6 +264,12 @@ const Index = () => {
                   <UserPlus className="w-4 h-4 mr-2" />
                   Friend Requests
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleCreateTestFriend}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Create Test Friend
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile-setup')}>
                   <User className="w-4 h-4 mr-2" />
                   Edit Profile
