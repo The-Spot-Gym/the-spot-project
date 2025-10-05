@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal, Settings, History } from "lucide-react";
+import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal, Settings, History, MessageCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -206,6 +206,9 @@ const Index = () => {
             <span className="font-bold text-xl">The Spot</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/messages')}>
+              <MessageCircle className="w-5 h-5" />
+            </Button>
             <Badge variant="secondary" className="hidden sm:flex">
               Welcome {userProfile?.display_name || userProfile?.username || 'User'}!
             </Badge>
@@ -226,6 +229,14 @@ const Index = () => {
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/messages')}>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Messages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/friend-requests')}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Friend Requests
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile-setup')}>
                   <User className="w-4 h-4 mr-2" />
                   Edit Profile

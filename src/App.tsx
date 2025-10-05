@@ -11,6 +11,9 @@ import ProfileSetup from "./pages/ProfileSetup";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import Settings from "./pages/Settings";
+import Messages from "./pages/Messages";
+import Chat from "./pages/Chat";
+import FriendRequests from "./pages/FriendRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
             <Route path="/gym/:gymId" element={<GymDetails />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/chat/:conversationId" element={<Chat />} />
+            <Route path="/friend-requests" element={<FriendRequests />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
