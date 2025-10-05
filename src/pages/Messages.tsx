@@ -124,23 +124,30 @@ const Messages = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // First get friendships
+      const { data: friendships, error: friendError } = await supabase
         .from('friendships')
-        .select(`
-          friend_id,
-          profiles:friend_id (
-            user_id,
-            display_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('friend_id')
         .eq('user_id', user.id)
         .eq('status', 'accepted');
 
-      if (error) throw error;
+      if (friendError) throw friendError;
 
-      setFriends(data?.map(f => f.profiles) || []);
+      if (!friendships || friendships.length === 0) {
+        setFriends([]);
+        return;
+      }
+
+      // Then fetch profiles for those friend IDs
+      const friendIds = friendships.map(f => f.friend_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, username, avatar_url')
+        .in('user_id', friendIds);
+
+      if (profileError) throw profileError;
+
+      setFriends(profiles || []);
     } catch (error) {
       console.error('Error fetching friends:', error);
     }
