@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal, Settings, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -118,11 +120,22 @@ const Index = () => {
 
     // Filter by search query
     let filtered = gymsWithDistance;
-    if (searchQuery.trim()) {
+    const hasSearchQuery = searchQuery.trim().length > 0;
+    
+    if (hasSearchQuery) {
+      // If searching, show all matching gyms regardless of quality
       filtered = gymsWithDistance.filter(gym =>
         gym.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gym.address?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    } else {
+      // If not searching, filter out low-quality gyms
+      filtered = gymsWithDistance.filter(gym => {
+        // Filter out gyms with less than 10 reviews OR 1 star or less
+        const hasEnoughReviews = !gym.user_ratings_total || gym.user_ratings_total >= 10;
+        const hasDecentRating = !gym.rating || gym.rating > 1.0;
+        return hasEnoughReviews && hasDecentRating;
+      });
     }
 
     // Sort
@@ -176,15 +189,44 @@ const Index = () => {
             <span className="font-bold text-xl">The Spot</span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="hidden sm:flex">
               Welcome {userProfile?.display_name || userProfile?.username || 'User'}!
             </Badge>
-            <div className="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-gradient-primary text-white">
+                      {(userProfile?.display_name?.[0] || userProfile?.username?.[0] || 'U').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{userProfile?.display_name || userProfile?.username || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile-setup')}>
+                  <User className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast({ title: "Coming soon!", description: "Workout history feature is under development." })}>
+                  <History className="w-4 h-4 mr-2" />
+                  History
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
