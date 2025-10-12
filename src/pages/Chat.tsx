@@ -36,8 +36,18 @@ const Chat = () => {
             table: 'messages',
             filter: `conversation_id=eq.${conversationId}`
           },
-          (payload) => {
-            fetchMessages();
+          async (payload) => {
+            const newMsg = payload.new as any;
+            
+            // Fetch the sender's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('user_id, display_name, username, avatar_url')
+              .eq('user_id', newMsg.sender_id)
+              .single();
+
+            // Add the new message with profile to state
+            setMessages((prev) => [...prev, { ...newMsg, profiles: profile }]);
           }
         )
         .subscribe();
