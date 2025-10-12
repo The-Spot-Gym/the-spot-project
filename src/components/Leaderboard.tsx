@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LeaderboardEntry {
   rank: number;
@@ -18,29 +21,87 @@ interface LeaderboardProps {
 }
 
 const Leaderboard = ({ gymName }: LeaderboardProps) => {
-  const benchData: LeaderboardEntry[] = [
-    { rank: 1, name: "Mike Chen", weight: 405, improvement: 15, avatar: "MC" },
-    { rank: 2, name: "Sarah Johnson", weight: 315, improvement: 25, avatar: "SJ" },
-    { rank: 3, name: "Alex Rivera", weight: 295, improvement: 10, avatar: "AR" },
-    { rank: 4, name: "David Kim", weight: 275, improvement: 20, avatar: "DK" },
-    { rank: 5, name: "Emma Wilson", weight: 255, improvement: 30, avatar: "EW", isCurrentUser: true },
-  ];
+  const { user } = useAuth();
+  const [benchData, setBenchData] = useState<LeaderboardEntry[]>([]);
+  const [squatData, setSquatData] = useState<LeaderboardEntry[]>([]);
+  const [deadliftData, setDeadliftData] = useState<LeaderboardEntry[]>([]);
 
-  const squatData: LeaderboardEntry[] = [
-    { rank: 1, name: "Alex Rivera", weight: 485, improvement: 20, avatar: "AR" },
-    { rank: 2, name: "Mike Chen", weight: 455, improvement: 10, avatar: "MC" },
-    { rank: 3, name: "David Kim", weight: 425, improvement: 35, avatar: "DK" },
-    { rank: 4, name: "Sarah Johnson", weight: 385, improvement: 15, avatar: "SJ" },
-    { rank: 5, name: "Emma Wilson", weight: 315, improvement: 25, avatar: "EW", isCurrentUser: true },
-  ];
+  const fetchLeaderboardData = async () => {
+    const { data, error } = await supabase
+      .from('leaderboard_stats')
+      .select(`
+        user_id,
+        personal_records,
+        profiles!inner(
+          display_name,
+          username,
+          avatar_url
+        )
+      `);
 
-  const deadliftData: LeaderboardEntry[] = [
-    { rank: 1, name: "David Kim", weight: 545, improvement: 25, avatar: "DK" },
-    { rank: 2, name: "Mike Chen", weight: 515, improvement: 20, avatar: "MC" },
-    { rank: 3, name: "Alex Rivera", weight: 495, improvement: 15, avatar: "AR" },
-    { rank: 4, name: "Sarah Johnson", weight: 425, improvement: 30, avatar: "SJ" },
-    { rank: 5, name: "Emma Wilson", weight: 365, improvement: 40, avatar: "EW", isCurrentUser: true },
-  ];
+    if (error) {
+      console.error('Error fetching leaderboard:', error);
+      return;
+    }
+
+    if (!data) return;
+
+    // Process data for each exercise
+    const processExerciseData = (exerciseKey: string) => {
+      return data
+        .map(entry => {
+          const records = entry.personal_records as any;
+          const weight = records?.[exerciseKey] || 0;
+          const profile = entry.profiles as any;
+          
+          return {
+            user_id: entry.user_id,
+            name: profile?.display_name || profile?.username || 'Anonymous',
+            avatar: profile?.avatar_url,
+            weight,
+            improvement: 0, // Could calculate from historical data
+          };
+        })
+        .filter(entry => entry.weight > 0)
+        .sort((a, b) => b.weight - a.weight)
+        .map((entry, index) => ({
+          rank: index + 1,
+          name: entry.name,
+          avatar: entry.avatar,
+          weight: entry.weight,
+          improvement: entry.improvement,
+          isCurrentUser: entry.user_id === user?.id,
+        }));
+    };
+
+    setBenchData(processExerciseData('bench_press'));
+    setSquatData(processExerciseData('squat'));
+    setDeadliftData(processExerciseData('deadlift'));
+  };
+
+  useEffect(() => {
+    fetchLeaderboardData();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('leaderboard-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leaderboard_stats'
+        },
+        () => {
+          fetchLeaderboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
