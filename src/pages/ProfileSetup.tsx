@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, User, Dumbbell, Target, ArrowRight, ArrowLeft } from "lucide-react";
+import { Camera, User, Dumbbell, Target, ArrowRight, ArrowLeft, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +39,8 @@ const ProfileSetup = () => {
     experience: ""
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
 
@@ -94,6 +96,68 @@ const ProfileSetup = () => {
     { value: "advanced", label: "Advanced (3+ years)", description: "Experienced lifter" },
     { value: "expert", label: "Expert/Competitor", description: "Competitive level" }
   ];
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a JPEG, PNG, or WebP image.",
+      });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB.",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('upload-avatar', {
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      setProfileData(prev => ({ ...prev, profilePicture: data.avatar_url }));
+      setShowAvatarSelection(false);
+      
+      toast({
+        title: "Avatar uploaded!",
+        description: "Your custom avatar has been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: "Failed to upload avatar. Please try again.",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleGoalToggle = (goal: string) => {
     setProfileData(prev => ({
@@ -241,6 +305,34 @@ const ProfileSetup = () => {
         {showAvatarSelection && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-center">Choose an Avatar</h4>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {uploading ? 'Uploading...' : 'Upload Custom Avatar'}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or choose a preset</span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-5 gap-2">
               {avatarOptions.map((avatar) => (
                 <div
