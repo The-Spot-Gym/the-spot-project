@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarCropper } from "@/components/AvatarCropper";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ const ProfileSetup = () => {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
@@ -121,10 +123,20 @@ const ProfileSetup = () => {
       return;
     }
 
+    // Show the image in cropper
+    const imageUrl = URL.createObjectURL(file);
+    setCropImageUrl(imageUrl);
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
+
     setUploading(true);
+    setCropImageUrl(null);
+    
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', croppedBlob, 'avatar.png');
 
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -496,6 +508,19 @@ const ProfileSetup = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
+      {cropImageUrl && (
+        <AvatarCropper
+          imageUrl={cropImageUrl}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setCropImageUrl(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+          }}
+        />
+      )}
+      
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
           {renderStepIndicator()}
