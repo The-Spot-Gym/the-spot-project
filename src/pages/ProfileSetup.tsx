@@ -202,7 +202,7 @@ const ProfileSetup = () => {
           display_name: profileData.displayName,
           bio: profileData.bio,
           username: user.user_metadata?.username || profileData.displayName.toLowerCase().replace(/\s+/g, '_'),
-        });
+        }, { onConflict: 'user_id' });
 
       if (error) throw error;
 
