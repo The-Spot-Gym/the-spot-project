@@ -14,23 +14,37 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    // Verify the user
+    // Create client with anon key and user's token for auth verification
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    // Verify the user
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('Auth error:', authError);
       throw new Error('Unauthorized');
     }
+
+    console.log('User authenticated:', user.id);
+
+    // Create service client for storage operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get the file from the request
     const formData = await req.formData();
