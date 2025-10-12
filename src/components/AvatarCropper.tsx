@@ -131,11 +131,11 @@ export const AvatarCropper = ({ imageUrl, onCropComplete, onCancel }: AvatarCrop
           {imageLoaded && (
             <>
               {/* Dark overlay */}
-              <div className="absolute inset-0 bg-black/50" />
+              <div className="absolute inset-0 bg-black/50 pointer-events-none" />
               
               {/* Circular crop area */}
               <div
-                className="absolute border-4 border-white rounded-full shadow-lg cursor-grab active:cursor-grabbing"
+                className="absolute border-4 border-white rounded-full cursor-grab active:cursor-grabbing"
                 style={{
                   width: cropSize,
                   height: cropSize,
@@ -144,20 +144,7 @@ export const AvatarCropper = ({ imageUrl, onCropComplete, onCancel }: AvatarCrop
                   boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
                 }}
                 onMouseDown={handleMouseDown}
-              >
-                <div className="w-full h-full rounded-full overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt="Crop area"
-                    className="w-full h-full object-cover pointer-events-none"
-                    style={{
-                      transform: `translate(-${cropPosition.x}px, -${cropPosition.y}px)`,
-                      width: imageRef.current?.offsetWidth || 0,
-                      height: imageRef.current?.offsetHeight || 0,
-                    }}
-                  />
-                </div>
-              </div>
+              />
             </>
           )}
           

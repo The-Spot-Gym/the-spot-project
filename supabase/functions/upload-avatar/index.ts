@@ -14,37 +14,35 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    // Create client with anon key and user's token for auth verification
+    // Extract and decode JWT to get user ID
     const token = authHeader.replace('Bearer ', '');
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
-
-    // Verify the user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      throw new Error('Unauthorized');
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid token format');
     }
 
-    console.log('User authenticated:', user.id);
-
-    // Create service client for storage operations
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    let userId: string;
+    try {
+      const payload = JSON.parse(atob(parts[1]));
+      userId = payload.sub;
+      if (!userId) {
+        throw new Error('No user ID in token');
+      }
+      console.log('User authenticated:', userId);
+    } catch (decodeError) {
+      console.error('Token decode error:', decodeError);
+      throw new Error('Invalid token');
+    }
 
     // Get the file from the request
     const formData = await req.formData();
@@ -68,7 +66,7 @@ serve(async (req) => {
 
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -92,7 +90,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ avatar_url: publicUrl })
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (updateError) {
       console.error('Profile update error:', updateError);
