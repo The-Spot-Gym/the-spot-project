@@ -22,7 +22,7 @@ const Index = () => {
   const [loadingGyms, setLoadingGyms] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"distance" | "rating">("distance");
+  const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -164,6 +164,11 @@ const Index = () => {
         const ratingA = a.rating || 0;
         const ratingB = b.rating || 0;
         return ratingB - ratingA;
+      } else if (sortBy === "reviews") {
+        // Sort by number of reviews descending (most reviews first)
+        const reviewsA = a.user_ratings_total || 0;
+        const reviewsB = b.user_ratings_total || 0;
+        return reviewsB - reviewsA;
       }
       return 0;
     });
@@ -312,13 +317,14 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-            <Select value={sortBy} onValueChange={(value: "distance" | "rating") => setSortBy(value)}>
+            <Select value={sortBy} onValueChange={(value: "distance" | "rating" | "reviews") => setSortBy(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="distance">Distance</SelectItem>
                 <SelectItem value="rating">Rating</SelectItem>
+                <SelectItem value="reviews">Reviews</SelectItem>
               </SelectContent>
             </Select>
           </div>

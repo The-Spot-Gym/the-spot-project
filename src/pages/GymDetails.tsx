@@ -113,6 +113,33 @@ const GymDetails = () => {
     }
   };
 
+  const handleLeaveGym = async () => {
+    if (!currentUser || !gymId) return;
+
+    try {
+      const { error } = await supabase
+        .from('gym_memberships')
+        .update({ is_active: false })
+        .eq('user_id', currentUser.id)
+        .eq('gym_id', gymId);
+
+      if (error) throw error;
+
+      setHasJoined(false);
+      toast({
+        title: "Left gym",
+        description: `You've left ${gymData?.name}`,
+      });
+    } catch (error: any) {
+      console.error('Error leaving gym:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to leave gym. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendFriendRequest = (memberName: string) => {
     // Handle friend request logic
     console.log(`Sending friend request to ${memberName}`);
@@ -177,17 +204,22 @@ const GymDetails = () => {
               </div>
             </div>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-2">
             {!hasJoined ? (
               <Button variant="fitness" onClick={handleJoinGym}>
                 <UserPlus className="w-4 h-4 mr-2" />
                 Join Gym
               </Button>
             ) : (
-              <Badge variant="success">
-                <Users className="w-4 h-4 mr-1" />
-                Member
-              </Badge>
+              <>
+                <Badge variant="success">
+                  <Users className="w-4 h-4 mr-1" />
+                  Member
+                </Badge>
+                <Button variant="outline" size="sm" onClick={handleLeaveGym}>
+                  Leave Gym
+                </Button>
+              </>
             )}
           </div>
         </div>
