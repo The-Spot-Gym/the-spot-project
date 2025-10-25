@@ -98,6 +98,20 @@ const Settings = () => {
       if (friendsData) {
         setFriends(friendsData);
       }
+
+      // Load gym memberships
+      const { data: gymsData } = await supabase
+        .from('gym_memberships')
+        .select(`
+          *,
+          gym:gyms(*)
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (gymsData) {
+        setMyGyms(gymsData);
+      }
     };
 
     loadUserData();
@@ -269,11 +283,12 @@ const Settings = () => {
 
       <div className="max-w-6xl mx-auto p-6">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="stats">Lifting Stats</TabsTrigger>
             <TabsTrigger value="friends">Friends</TabsTrigger>
+            <TabsTrigger value="gyms">My Gyms</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
           </TabsList>
 
@@ -479,6 +494,61 @@ const Settings = () => {
                         </div>
                         <Button variant="outline" size="sm" onClick={() => navigate('/messages')}>
                           Message
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* My Gyms Tab */}
+          <TabsContent value="gyms" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Gyms</CardTitle>
+                <CardDescription>Gyms you're a member of</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {myGyms.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No gym memberships yet</p>
+                    <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Find Gyms
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myGyms.map((membership: any) => (
+                      <div 
+                        key={membership.id} 
+                        className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/gym/${membership.gym_id}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {membership.gym?.photo_url && (
+                            <img 
+                              src={membership.gym.photo_url} 
+                              alt={membership.gym.name}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          )}
+                          <div>
+                            <p className="font-medium">{membership.gym?.name}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {membership.gym?.address}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Joined {new Date(membership.joined_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          View Details
                         </Button>
                       </div>
                     ))}

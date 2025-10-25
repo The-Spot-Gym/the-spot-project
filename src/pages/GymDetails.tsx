@@ -17,10 +17,32 @@ const GymDetails = () => {
   const [hasJoined, setHasJoined] = useState(false);
   const [gymData, setGymData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     fetchGymDetails();
+    checkUser();
   }, [gymId]);
+
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+    if (user && gymId) {
+      checkMembership(user.id);
+    }
+  };
+
+  const checkMembership = async (userId: string) => {
+    const { data } = await supabase
+      .from('gym_memberships')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('gym_id', gymId)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    setHasJoined(!!data);
+  };
 
   const fetchGymDetails = async () => {
     if (!gymId) return;
@@ -55,8 +77,40 @@ const GymDetails = () => {
     { name: "James Miller", avatar: "JM", status: "online", lastSeen: "Active now", canMessage: true },
   ];
 
-  const handleJoinGym = () => {
-    setHasJoined(true);
+  const handleJoinGym = async () => {
+    if (!currentUser || !gymId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to join a gym.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('gym_memberships')
+        .insert({
+          user_id: currentUser.id,
+          gym_id: gymId,
+          is_active: true
+        });
+
+      if (error) throw error;
+
+      setHasJoined(true);
+      toast({
+        title: "Success!",
+        description: `You've joined ${gymData?.name}!`,
+      });
+    } catch (error: any) {
+      console.error('Error joining gym:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join gym. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendFriendRequest = (memberName: string) => {

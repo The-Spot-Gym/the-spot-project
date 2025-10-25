@@ -127,6 +127,44 @@ export type Database = {
         }
         Relationships: []
       }
+      gym_memberships: {
+        Row: {
+          created_at: string
+          gym_id: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_memberships_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gym_visits: {
         Row: {
           created_at: string
