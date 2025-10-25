@@ -195,54 +195,57 @@ const GymDetails = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-white shadow-card p-4 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            {gymData.photo_url && (
-              <img 
-                src={gymData.photo_url} 
-                alt={gymData.name}
-                className="w-12 h-12 rounded-lg object-cover"
-              />
-            )}
-            <div>
-              <h1 className="font-bold text-xl">{gymData.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {gymData.rating && (
-                  <>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 fill-warning text-warning" />
-                      <span>{gymData.rating}</span>
-                    </div>
-                    <span>•</span>
-                  </>
-                )}
-                {gymData.user_ratings_total && (
-                  <span>{gymData.user_ratings_total} reviews</span>
-                )}
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-2 mb-3 sm:mb-0">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/')}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {gymData.photo_url && (
+                <img 
+                  src={gymData.photo_url} 
+                  alt={gymData.name}
+                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <h1 className="font-bold text-lg sm:text-xl truncate">{gymData.name}</h1>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  {gymData.rating && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-warning text-warning flex-shrink-0" />
+                        <span>{gymData.rating}</span>
+                      </div>
+                      <span>•</span>
+                    </>
+                  )}
+                  {gymData.user_ratings_total && (
+                    <span className="truncate">{gymData.user_ratings_total} reviews</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          <div className="ml-auto flex gap-2">
+          <div className="flex gap-2 sm:absolute sm:right-4 sm:top-4">
             {!hasJoined ? (
-              <Button variant="fitness" onClick={handleJoinGym}>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Join Gym
+              <Button variant="fitness" onClick={handleJoinGym} size="sm" className="flex-1 sm:flex-initial">
+                <UserPlus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Join Gym</span>
               </Button>
             ) : (
               <>
-                <Badge variant="success">
+                <Badge variant="success" className="flex-1 sm:flex-initial justify-center">
                   <Users className="w-4 h-4 mr-1" />
                   Member
                 </Badge>
-                <Button variant="outline" size="sm" onClick={handleLeaveGym}>
-                  Leave Gym
+                <Button variant="outline" size="sm" onClick={handleLeaveGym} className="flex-1 sm:flex-initial">
+                  Leave
                 </Button>
               </>
             )}
@@ -460,16 +463,16 @@ const GymDetails = () => {
                     return (
                       <Card key={index} className="hover:shadow-md transition-all duration-200">
                         <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-12 h-12">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Avatar className="w-12 h-12 flex-shrink-0">
                                 <AvatarImage src={profile?.avatar_url} />
                                 <AvatarFallback className="bg-gradient-primary text-white">
                                   {displayName[0]?.toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <h3 className="font-semibold">{displayName}</h3>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold truncate">{displayName}</h3>
                                 <p className="text-sm text-muted-foreground">
                                   Member since {new Date(membership.joined_at).toLocaleDateString()}
                                 </p>
@@ -481,6 +484,7 @@ const GymDetails = () => {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleSendFriendRequest(displayName)}
+                                className="w-full sm:w-auto flex-shrink-0"
                               >
                                 <UserPlus className="w-4 h-4 mr-1" />
                                 Add Friend

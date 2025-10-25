@@ -82,29 +82,29 @@ const MyGyms = () => {
                 {myGyms.map((membership: any) => (
                   <div 
                     key={membership.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => navigate(`/gym/${membership.gym_id}`)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {membership.gym?.photo_url && (
                         <img 
                           src={membership.gym.photo_url} 
                           alt={membership.gym.name}
-                          className="w-16 h-16 rounded-lg object-cover"
+                          className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                         />
                       )}
-                      <div>
-                        <p className="font-medium">{membership.gym?.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{membership.gym?.name}</p>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {membership.gym?.address}
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{membership.gym?.address}</span>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Joined {new Date(membership.joined_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto flex-shrink-0">
                       View Details
                     </Button>
                   </div>
