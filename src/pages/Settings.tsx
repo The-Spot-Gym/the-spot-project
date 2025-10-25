@@ -266,12 +266,12 @@ const Settings = () => {
 
       <div className="max-w-6xl mx-auto p-6">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="stats">Lifting Stats</TabsTrigger>
-            <TabsTrigger value="friends">Friends</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsList className="inline-flex w-full justify-start overflow-x-auto">
+            <TabsTrigger value="profile" className="flex-shrink-0">Profile</TabsTrigger>
+            <TabsTrigger value="account" className="flex-shrink-0">Account</TabsTrigger>
+            <TabsTrigger value="stats" className="flex-shrink-0">Lifting Stats</TabsTrigger>
+            <TabsTrigger value="friends" className="flex-shrink-0">Friends</TabsTrigger>
+            <TabsTrigger value="appearance" className="flex-shrink-0">Appearance</TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
