@@ -20,14 +20,40 @@ const Index = () => {
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [streakData, setStreakData] = useState<any>(null);
-  const [workoutLog, setWorkoutLog] = useState({
+  const [currentExercise, setCurrentExercise] = useState({
     exercise: "",
     weight: "",
     reps: "",
     sets: ""
   });
+  const [exercisesList, setExercisesList] = useState<any[]>([]);
   const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Comprehensive exercise list
+  const availableExercises = [
+    // Chest
+    "Bench Press", "Incline Bench Press", "Decline Bench Press",
+    "Dumbbell Bench Press", "Incline Dumbbell Press", "Decline Dumbbell Press",
+    "Cable Flyes", "Dumbbell Flyes", "Pec Deck", "Push-ups",
+    // Back
+    "Deadlift", "Barbell Row", "T-Bar Row", "Dumbbell Row",
+    "Lat Pulldown", "Pull-ups", "Chin-ups", "Seated Cable Row",
+    "Face Pulls", "Shrugs",
+    // Shoulders
+    "Overhead Press", "Arnold Press", "Lateral Raises", "Front Raises",
+    "Rear Delt Flyes", "Cable Lateral Raises", "Upright Row",
+    // Legs
+    "Squat", "Front Squat", "Leg Press", "Leg Extension",
+    "Leg Curl", "Romanian Deadlift", "Lunges", "Bulgarian Split Squat",
+    "Calf Raises", "Hack Squat",
+    // Arms
+    "Barbell Curl", "Dumbbell Curl", "Hammer Curl", "Preacher Curl",
+    "Tricep Dips", "Skull Crushers", "Tricep Pushdown", "Overhead Tricep Extension",
+    "Cable Curls", "Concentration Curls",
+    // Core
+    "Planks", "Crunches", "Leg Raises", "Russian Twists", "Cable Crunches"
+  ].sort();
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -78,23 +104,55 @@ const Index = () => {
   const fetchRecentWorkouts = async () => {
     if (!user) return;
 
-    const { data } = await supabase
-      .from('weight_records')
-      .select('*')
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select(`
+        *,
+        exercises:workout_exercises(*)
+      `)
       .eq('user_id', user.id)
-      .order('recorded_at', { ascending: false })
+      .order('session_date', { ascending: false })
       .limit(5);
 
-    if (data) {
-      setRecentWorkouts(data);
+    if (sessions) {
+      setRecentWorkouts(sessions);
     }
   };
 
-  const handleLogWorkout = async () => {
-    if (!user || !workoutLog.exercise || !workoutLog.weight || !workoutLog.reps || !workoutLog.sets) {
+  const handleAddExercise = () => {
+    if (!currentExercise.exercise || !currentExercise.weight || !currentExercise.reps || !currentExercise.sets) {
       toast({
         title: "Missing information",
-        description: "Please fill in all fields to log your workout.",
+        description: "Please fill in all fields to add an exercise.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExercisesList(prev => [...prev, {
+      exercise_name: currentExercise.exercise,
+      weight: parseFloat(currentExercise.weight),
+      reps: parseInt(currentExercise.reps),
+      sets: parseInt(currentExercise.sets)
+    }]);
+
+    setCurrentExercise({ exercise: "", weight: "", reps: "", sets: "" });
+    
+    toast({
+      title: "Exercise added!",
+      description: "Add more exercises or finish your workout.",
+    });
+  };
+
+  const handleRemoveExercise = (index: number) => {
+    setExercisesList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFinishWorkout = async () => {
+    if (!user || exercisesList.length === 0) {
+      toast({
+        title: "No exercises added",
+        description: "Please add at least one exercise to your workout.",
         variant: "destructive",
       });
       return;
@@ -102,34 +160,56 @@ const Index = () => {
 
     setSaving(true);
     try {
-      // Save workout record
-      const { error } = await supabase
+      // Create workout session
+      const { data: session, error: sessionError } = await supabase
+        .from('workout_sessions')
+        .insert({
+          user_id: user.id,
+          session_date: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Insert all exercises
+      const exercisesWithSessionId = exercisesList.map(ex => ({
+        session_id: session.id,
+        ...ex
+      }));
+
+      const { error: exercisesError } = await supabase
+        .from('workout_exercises')
+        .insert(exercisesWithSessionId);
+
+      if (exercisesError) throw exercisesError;
+
+      // Also log in weight_records for streak tracking
+      const totalWeight = exercisesList.reduce((sum, ex) => sum + (ex.weight * ex.sets * ex.reps), 0);
+      await supabase
         .from('weight_records')
         .insert({
           user_id: user.id,
-          weight: parseFloat(workoutLog.weight),
-          notes: `${workoutLog.exercise} - ${workoutLog.sets} sets x ${workoutLog.reps} reps`
+          weight: totalWeight,
+          notes: `Workout: ${exercisesList.length} exercises`
         });
 
-      if (error) throw error;
-
       // Update total workouts
-      const { error: statsError } = await supabase
+      await supabase
         .from('leaderboard_stats')
         .update({
           total_workouts: (streakData?.total_workouts || 0) + 1
         })
         .eq('user_id', user.id);
 
-      if (statsError) throw statsError;
-
       toast({
-        title: "Workout logged!",
-        description: "Great job! Keep up the momentum! 💪",
+        title: "Workout completed!",
+        description: `Great job! You completed ${exercisesList.length} exercises! 💪`,
       });
 
-      // Reset form and refresh data
-      setWorkoutLog({ exercise: "", weight: "", reps: "", sets: "" });
+      // Reset and refresh
+      setExercisesList([]);
+      setCurrentExercise({ exercise: "", weight: "", reps: "", sets: "" });
       fetchStreakData();
       fetchRecentWorkouts();
     } catch (error: any) {
@@ -299,31 +379,53 @@ const Index = () => {
           <Card>
             <CardHeader>
               <CardTitle>Log Today's Workout</CardTitle>
-              <CardDescription>Track your exercises to maintain your streak</CardDescription>
+              <CardDescription>Add exercises to your workout session</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Current exercises in session */}
+              {exercisesList.length > 0 && (
+                <div className="space-y-2 p-4 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Exercises in this workout:</p>
+                    <Badge variant="secondary">{exercisesList.length} exercises</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {exercisesList.map((ex, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-background rounded border">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{ex.exercise_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {ex.weight} lbs × {ex.sets} sets × {ex.reps} reps
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleRemoveExercise(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="exercise">Exercise</Label>
                 <Select 
-                  value={workoutLog.exercise} 
-                  onValueChange={(value) => setWorkoutLog(prev => ({ ...prev, exercise: value }))}
+                  value={currentExercise.exercise} 
+                  onValueChange={(value) => setCurrentExercise(prev => ({ ...prev, exercise: value }))}
                 >
                   <SelectTrigger id="exercise">
                     <SelectValue placeholder="Select exercise" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Bench Press">Bench Press</SelectItem>
-                    <SelectItem value="Squat">Squat</SelectItem>
-                    <SelectItem value="Deadlift">Deadlift</SelectItem>
-                    <SelectItem value="Overhead Press">Overhead Press</SelectItem>
-                    <SelectItem value="Barbell Row">Barbell Row</SelectItem>
-                    <SelectItem value="Pull-ups">Pull-ups</SelectItem>
-                    <SelectItem value="Dips">Dips</SelectItem>
-                    <SelectItem value="Leg Press">Leg Press</SelectItem>
-                    <SelectItem value="Lat Pulldown">Lat Pulldown</SelectItem>
-                    <SelectItem value="Cable Flyes">Cable Flyes</SelectItem>
-                    <SelectItem value="Leg Curl">Leg Curl</SelectItem>
-                    <SelectItem value="Leg Extension">Leg Extension</SelectItem>
+                  <SelectContent className="max-h-[300px]">
+                    {availableExercises.map((exercise) => (
+                      <SelectItem key={exercise} value={exercise}>
+                        {exercise}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -335,8 +437,8 @@ const Index = () => {
                     id="weight"
                     type="number"
                     placeholder="135"
-                    value={workoutLog.weight}
-                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, weight: e.target.value }))}
+                    value={currentExercise.weight}
+                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, weight: e.target.value }))}
                   />
                 </div>
 
@@ -346,8 +448,8 @@ const Index = () => {
                     id="reps"
                     type="number"
                     placeholder="10"
-                    value={workoutLog.reps}
-                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, reps: e.target.value }))}
+                    value={currentExercise.reps}
+                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, reps: e.target.value }))}
                   />
                 </div>
 
@@ -357,25 +459,38 @@ const Index = () => {
                     id="sets"
                     type="number"
                     placeholder="3"
-                    value={workoutLog.sets}
-                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, sets: e.target.value }))}
+                    value={currentExercise.sets}
+                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, sets: e.target.value }))}
                   />
                 </div>
               </div>
 
-              <Button 
-                onClick={handleLogWorkout} 
-                disabled={saving}
-                className="w-full"
-                variant="fitness"
-              >
-                {saving ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleAddExercise}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Exercise
+                </Button>
+                
+                {exercisesList.length > 0 && (
+                  <Button 
+                    onClick={handleFinishWorkout} 
+                    disabled={saving}
+                    className="flex-1"
+                    variant="fitness"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Finish Workout
+                  </Button>
                 )}
-                Log Workout
-              </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -383,7 +498,7 @@ const Index = () => {
           <Card>
             <CardHeader>
               <CardTitle>Recent Workouts</CardTitle>
-              <CardDescription>Your last 5 logged workouts</CardDescription>
+              <CardDescription>Your last 5 logged workout sessions</CardDescription>
             </CardHeader>
             <CardContent>
               {recentWorkouts.length === 0 ? (
@@ -393,19 +508,26 @@ const Index = () => {
                   <p className="text-xs text-muted-foreground mt-1">Start logging to track your progress!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {recentWorkouts.map((workout) => (
-                    <div key={workout.id} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{workout.notes}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {workout.weight} lbs
-                          </p>
-                        </div>
+                <div className="space-y-4">
+                  {recentWorkouts.map((session) => (
+                    <div key={session.id} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex justify-between items-center mb-2">
                         <Badge variant="secondary" className="text-xs">
-                          {new Date(workout.recorded_at).toLocaleDateString()}
+                          {new Date(session.session_date).toLocaleDateString()}
                         </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {session.exercises?.length || 0} exercises
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        {session.exercises?.map((exercise: any) => (
+                          <div key={exercise.id} className="text-sm">
+                            <p className="font-medium">{exercise.exercise_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {exercise.weight} lbs × {exercise.sets} sets × {exercise.reps} reps
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
