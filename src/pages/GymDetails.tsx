@@ -69,14 +69,38 @@ const GymDetails = () => {
     }
   };
 
-  const gymMembers = [
-    { name: "Mike Chen", avatar: "MC", status: "online", lastSeen: "Active now", canMessage: false },
-    { name: "Sarah Johnson", avatar: "SJ", status: "online", lastSeen: "Active now", canMessage: true },
-    { name: "Alex Rivera", avatar: "AR", status: "offline", lastSeen: "2 hours ago", canMessage: true },
-    { name: "David Kim", avatar: "DK", status: "online", lastSeen: "Active now", canMessage: false },
-    { name: "Emma Wilson", avatar: "EW", status: "offline", lastSeen: "1 day ago", canMessage: true },
-    { name: "James Miller", avatar: "JM", status: "online", lastSeen: "Active now", canMessage: true },
-  ];
+  const [gymMembers, setGymMembers] = useState<any[]>([]);
+
+  const fetchGymMembers = async () => {
+    if (!gymId) return;
+    
+    const { data, error } = await supabase
+      .from('gym_memberships')
+      .select(`
+        user_id,
+        joined_at,
+        profiles!inner(
+          display_name,
+          username,
+          avatar_url
+        )
+      `)
+      .eq('gym_id', gymId)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching gym members:', error);
+      return;
+    }
+
+    setGymMembers(data || []);
+  };
+
+  useEffect(() => {
+    if (hasJoined) {
+      fetchGymMembers();
+    }
+  }, [hasJoined, gymId]);
 
   const handleJoinGym = async () => {
     if (!currentUser || !gymId) {
@@ -428,51 +452,56 @@ const GymDetails = () => {
           <TabsContent value="members" className="mt-6">
             <div className="grid gap-4">
               {hasJoined ? (
-                gymMembers.map((member, index) => (
-                  <Card key={index} className="hover:shadow-md transition-all duration-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={member.avatar} />
-                              <AvatarFallback className="bg-gradient-primary text-white">
-                                {member.avatar}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                              member.status === 'online' ? 'bg-success' : 'bg-muted-foreground'
-                            }`} />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{member.name}</h3>
-                            <p className="text-sm text-muted-foreground">{member.lastSeen}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {member.canMessage ? (
-                            <>
+                gymMembers.length > 0 ? (
+                  gymMembers.map((membership, index) => {
+                    const profile = membership.profiles as any;
+                    const displayName = profile?.display_name || profile?.username || 'Anonymous';
+                    
+                    return (
+                      <Card key={index} className="hover:shadow-md transition-all duration-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={profile?.avatar_url} />
+                                <AvatarFallback className="bg-gradient-primary text-white">
+                                  {displayName[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h3 className="font-semibold">{displayName}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Member since {new Date(membership.joined_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {membership.user_id !== currentUser?.id && (
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => handleSendFriendRequest(member.name)}
+                                onClick={() => handleSendFriendRequest(displayName)}
                               >
                                 <UserPlus className="w-4 h-4 mr-1" />
                                 Add Friend
                               </Button>
-                              <Button variant="ghost" size="sm">
-                                <MessageCircle className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Badge variant="outline">Friend Request Sent</Badge>
-                          )}
-                        </div>
-                      </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <Card className="text-center p-8">
+                    <CardContent>
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="font-semibold mb-2">No Members Yet</h3>
+                      <p className="text-muted-foreground">
+                        Be the first to build a community at {gymData.name}!
+                      </p>
                     </CardContent>
                   </Card>
-                ))
+                )
               ) : (
                 <Card className="text-center p-8">
                   <CardContent>

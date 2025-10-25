@@ -116,46 +116,62 @@ const Leaderboard = ({ gymName }: LeaderboardProps) => {
     }
   };
 
-  const renderLeaderboard = (data: LeaderboardEntry[], exercise: string) => (
-    <div className="space-y-3">
-      {data.map((entry) => (
-        <Card key={`${exercise}-${entry.rank}`} className={`transition-all duration-200 hover:shadow-md ${entry.isCurrentUser ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-8">
-                {getRankIcon(entry.rank)}
-              </div>
-              
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={entry.avatar} />
-                <AvatarFallback className="bg-gradient-primary text-white text-sm">
-                  {entry.avatar}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`font-semibold ${entry.isCurrentUser ? 'text-primary' : ''}`}>
-                    {entry.name}
-                  </span>
-                  {entry.isCurrentUser && (
-                    <Badge variant="secondary" className="text-xs">You</Badge>
-                  )}
+  const renderLeaderboard = (data: LeaderboardEntry[], exercise: string) => {
+    if (data.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-semibold mb-2">No Records Yet</h3>
+          <p className="text-muted-foreground">
+            Be the first to set a record in this exercise!
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {data.map((entry) => (
+          <Card key={`${exercise}-${entry.rank}`} className={`transition-all duration-200 hover:shadow-md ${entry.isCurrentUser ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-8">
+                  {getRankIcon(entry.rank)}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="font-bold text-foreground">{entry.weight} lbs</span>
-                  <div className="flex items-center gap-1 text-success">
-                    <TrendingUp className="w-3 h-3" />
-                    <span>+{entry.improvement}%</span>
+                
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={entry.avatar} />
+                  <AvatarFallback className="bg-gradient-primary text-white text-sm">
+                    {entry.name[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold ${entry.isCurrentUser ? 'text-primary' : ''}`}>
+                      {entry.name}
+                    </span>
+                    {entry.isCurrentUser && (
+                      <Badge variant="secondary" className="text-xs">You</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-bold text-foreground">{entry.weight} lbs</span>
+                    {entry.improvement > 0 && (
+                      <div className="flex items-center gap-1 text-success">
+                        <TrendingUp className="w-3 h-3" />
+                        <span>+{entry.improvement}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Card className="w-full">
