@@ -127,6 +127,38 @@ export type Database = {
         }
         Relationships: []
       }
+      gym_visits: {
+        Row: {
+          created_at: string
+          gym_id: string
+          id: string
+          user_id: string
+          visited_at: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          id?: string
+          user_id: string
+          visited_at?: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          id?: string
+          user_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_visits_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gyms: {
         Row: {
           address: string | null
@@ -219,21 +251,27 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          delivered_at: string | null
           id: string
+          read_at: string | null
           sender_id: string
         }
         Insert: {
           content: string
           conversation_id: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id: string
         }
         Update: {
           content?: string
           conversation_id?: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -311,9 +349,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_gym_based_friend_recommendations: {
+        Args: { current_user_id: string; limit_count?: number }
+        Returns: {
+          avatar_url: string
+          common_gym_names: string[]
+          display_name: string
+          shared_gyms_count: number
+          user_id: string
+          username: string
+        }[]
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
+      }
+      mark_messages_as_read: {
+        Args: { conversation_uuid: string; reader_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
