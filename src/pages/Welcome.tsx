@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User } from "lucide-react";
+import { MapPin, Users, Trophy, Dumbbell, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import heroImage from "@/assets/hero-realistic-gym.jpg";
 
 const Welcome = () => {
@@ -9,87 +9,97 @@ const Welcome = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
+      {/* Header with Logo */}
+      <header className="p-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-glow">
+              <Dumbbell className="w-7 h-7 text-primary" />
+            </div>
+            <div className="text-white">
+              <h2 className="text-2xl font-bold">The Spot</h2>
+              <p className="text-sm opacity-80">Your Fitness Community</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="relative mb-8 rounded-2xl overflow-hidden shadow-glow">
+          <div className="relative mb-8 rounded-3xl overflow-hidden shadow-glow">
             <img 
               src={heroImage} 
               alt="Fitness community working out together"
-              className="w-full h-[400px] object-cover"
+              className="w-full h-[450px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h1 className="text-5xl font-bold mb-2">The Spot</h1>
-              <p className="text-xl opacity-90">Find Your Gym. Find Your Spot.</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6">
+              <h1 className="text-6xl font-bold mb-4 drop-shadow-lg">Find Your Spot</h1>
+              <p className="text-2xl opacity-90 mb-8 drop-shadow-md">Your fitness journey starts here</p>
+              <Button 
+                size="lg"
+                onClick={() => navigate('/auth')}
+                className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6 rounded-2xl shadow-xl"
+              >
+                Get Started
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
             </div>
-          </div>
-          
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Connect with gym-goers near you, track your progress, and stay motivated with a community that gets it.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              variant="hero" 
-              size="xl"
-              onClick={() => navigate('/auth')}
-              className="bg-white text-primary hover:bg-white/90"
-            >
-              <User className="mr-2" />
-              Get Started
-            </Button>
-            <Button 
-              variant="outline" 
-              size="xl"
-              className="border-white text-white hover:bg-white hover:text-primary bg-white/10 backdrop-blur-sm"
-              onClick={() => navigate('/auth')}
-            >
-              <MapPin className="mr-2" />
-              Find Gyms Near Me
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* Features Preview */}
-      <div className="bg-background/95 backdrop-blur-sm p-8">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-card border-0 shadow-card">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-gradient-secondary rounded-full flex items-center justify-center mb-2">
-                <MapPin className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle>Find Your Gym</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-center">Discover top-rated gyms nearby with real reviews from the community.</p>
-            </CardContent>
-          </Card>
+      {/* Features - Clickable Cards */}
+      <div className="bg-background/95 backdrop-blur-sm p-8 pb-12">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">What You Can Do</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card 
+              className="bg-gradient-card border-0 shadow-card hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => navigate('/auth')}
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-secondary rounded-2xl flex items-center justify-center mb-3">
+                  <MapPin className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-xl">Find Your Gym</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center">Discover top-rated gyms nearby with real reviews from the community.</p>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-gradient-card border-0 shadow-card">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-gradient-accent rounded-full flex items-center justify-center mb-2">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle>Connect & Motivate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-center">Find workout buddies, share progress, and stay motivated together.</p>
-            </CardContent>
-          </Card>
+            <Card 
+              className="bg-gradient-card border-0 shadow-card hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => navigate('/auth')}
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-accent rounded-2xl flex items-center justify-center mb-3">
+                  <Users className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-xl">Connect & Motivate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center">Find workout buddies, share progress, and stay motivated together.</p>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-gradient-card border-0 shadow-card">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center mb-2">
-                <Trophy className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle>Compete & Grow</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-center">Track PRs, climb leaderboards, and celebrate achievements.</p>
-            </CardContent>
-          </Card>
+            <Card 
+              className="bg-gradient-card border-0 shadow-card hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => navigate('/auth')}
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mb-3">
+                  <Trophy className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-xl">Compete & Grow</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center">Track PRs, climb leaderboards, and celebrate achievements.</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
