@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
 import FriendRequests from "./pages/FriendRequests";
+import FriendRecommendations from "./pages/FriendRecommendations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const AppContent = () => {
           <Route path="/messages" element={<Messages />} />
           <Route path="/chat/:conversationId" element={<Chat />} />
           <Route path="/friend-requests" element={<FriendRequests />} />
+          <Route path="/friend-recommendations" element={<FriendRecommendations />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

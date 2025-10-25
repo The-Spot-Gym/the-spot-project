@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Dumbbell, User, LogOut, Loader2, Settings, MessageCircle, UserPlus, Plus, TrendingUp, Calendar, Save, Flame, X, Trash2 } from "lucide-react";
+import { MapPin, Dumbbell, User, LogOut, Loader2, Settings, MessageCircle, UserPlus, Plus, TrendingUp, Calendar, Save, Flame, X, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -331,6 +331,10 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => navigate('/friend-requests')}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Friend Requests
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/friend-recommendations')}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Friend Recommendations
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile-setup')}>
