@@ -18,6 +18,7 @@ const GymDetails = () => {
   const [gymData, setGymData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
 
   useEffect(() => {
     fetchGymDetails();
@@ -348,9 +349,39 @@ const GymDetails = () => {
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6">
+            {/* Star Filter Buttons */}
+            {gymData.reviews && gymData.reviews.length > 0 && (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                <Button
+                  variant={selectedRating === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedRating(null)}
+                >
+                  All Reviews
+                </Button>
+                {[5, 4, 3, 2, 1].map((rating) => {
+                  const count = gymData.reviews.filter((r: any) => r.rating === rating).length;
+                  return (
+                    <Button
+                      key={rating}
+                      variant={selectedRating === rating ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedRating(rating)}
+                      disabled={count === 0}
+                    >
+                      <Star className="w-4 h-4 mr-1 fill-warning text-warning" />
+                      {rating} ({count})
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+            
             <div className="grid gap-4">
               {gymData.reviews && gymData.reviews.length > 0 ? (
-                gymData.reviews.map((review: any, index: number) => (
+                gymData.reviews
+                  .filter((review: any) => selectedRating === null || review.rating === selectedRating)
+                  .map((review: any, index: number) => (
                   <Card key={index}>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
@@ -382,6 +413,13 @@ const GymDetails = () => {
               ) : (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">No reviews yet</p>
+                </Card>
+              )}
+              
+              {gymData.reviews && gymData.reviews.length > 0 && 
+                gymData.reviews.filter((review: any) => selectedRating === null || review.rating === selectedRating).length === 0 && (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No {selectedRating}-star reviews found</p>
                 </Card>
               )}
             </div>
