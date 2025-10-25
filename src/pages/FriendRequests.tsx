@@ -30,18 +30,7 @@ const FriendRequests = () => {
       // Fetch received friend requests
       const { data: received, error: receivedError } = await supabase
         .from('friendships')
-        .select(`
-          id,
-          user_id,
-          status,
-          created_at,
-          profiles:user_id (
-            user_id,
-            display_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('id, user_id, status, created_at')
         .eq('friend_id', user.id)
         .eq('status', 'pending');
 
@@ -50,25 +39,45 @@ const FriendRequests = () => {
       // Fetch sent friend requests
       const { data: sent, error: sentError } = await supabase
         .from('friendships')
-        .select(`
-          id,
-          friend_id,
-          status,
-          created_at,
-          profiles:friend_id (
-            user_id,
-            display_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('id, friend_id, status, created_at')
         .eq('user_id', user.id)
         .eq('status', 'pending');
 
       if (sentError) throw sentError;
 
-      setPendingRequests(received || []);
-      setSentRequests(sent || []);
+      // Fetch profiles for received requests
+      if (received && received.length > 0) {
+        const userIds = received.map(r => r.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', userIds);
+
+        const receivedWithProfiles = received.map(r => ({
+          ...r,
+          profiles: profiles?.find(p => p.user_id === r.user_id)
+        }));
+        setPendingRequests(receivedWithProfiles);
+      } else {
+        setPendingRequests([]);
+      }
+
+      // Fetch profiles for sent requests
+      if (sent && sent.length > 0) {
+        const friendIds = sent.map(r => r.friend_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', friendIds);
+
+        const sentWithProfiles = sent.map(r => ({
+          ...r,
+          profiles: profiles?.find(p => p.user_id === r.friend_id)
+        }));
+        setSentRequests(sentWithProfiles);
+      } else {
+        setSentRequests([]);
+      }
     } catch (error) {
       console.error('Error fetching friend requests:', error);
       toast({
