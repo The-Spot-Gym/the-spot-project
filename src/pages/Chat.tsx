@@ -38,7 +38,8 @@ const Chat = () => {
           },
           async (payload) => {
             const newMsg = payload.new as any;
-            
+            console.log('[Realtime] New message event', newMsg);
+
             // Fetch the sender's profile
             const { data: profile } = await supabase
               .from('profiles')
@@ -46,13 +47,24 @@ const Chat = () => {
               .eq('user_id', newMsg.sender_id)
               .single();
 
-            // Add the new message with profile to state
-            setMessages((prev) => [...prev, { ...newMsg, profiles: profile }]);
+            // Add the new message with profile to state (avoid duplicates)
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, { ...newMsg, profiles: profile }];
+            });
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('[Realtime] channel status:', status);
+        });
+
+      // Fallback: light polling to ensure updates even if realtime drops
+      const polling = setInterval(() => {
+        fetchMessages();
+      }, 5000);
 
       return () => {
+        clearInterval(polling);
         supabase.removeChannel(channel);
       };
     }
