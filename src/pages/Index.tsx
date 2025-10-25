@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Users, Trophy, Dumbbell, User, Star, LogOut, Loader2, Search, SlidersHorizontal, Settings, History, MessageCircle, UserPlus } from "lucide-react";
+import { MapPin, Dumbbell, User, LogOut, Loader2, Settings, MessageCircle, UserPlus, Plus, TrendingUp, Calendar, Save, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,11 +19,15 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [gyms, setGyms] = useState<any[]>([]);
-  const [loadingGyms, setLoadingGyms] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
+  const [streakData, setStreakData] = useState<any>(null);
+  const [workoutLog, setWorkoutLog] = useState({
+    exercise: "",
+    weight: "",
+    reps: "",
+    sets: ""
+  });
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -37,7 +42,6 @@ const Index = () => {
         if (data) {
           setUserProfile(data);
         } else {
-          // Fallback to user metadata
           setUserProfile({ 
             username: user.user_metadata?.username || 'User', 
             display_name: user.user_metadata?.display_name || user.user_metadata?.full_name || 'Fitness Enthusiast'
@@ -49,163 +53,100 @@ const Index = () => {
     fetchProfile();
   }, [user]);
 
-  // Get user location
+  // Fetch streak and workout data
   useEffect(() => {
-    if (user && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          toast({
-            title: "Location access denied",
-            description: "Using default location. Please enable location access for better results.",
-            variant: "destructive",
-          });
-          // Default to a location (e.g., New York City)
-          setUserLocation({ latitude: 40.7128, longitude: -74.0060 });
-        }
-      );
+    if (user) {
+      fetchStreakData();
+      fetchRecentWorkouts();
     }
-  }, [user, toast]);
+  }, [user]);
 
-  // Fetch gyms when location is available
-  useEffect(() => {
-    if (userLocation) {
-      fetchNearbyGyms();
+  const fetchStreakData = async () => {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('leaderboard_stats')
+      .select('current_streak, longest_streak, total_workouts')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (data) {
+      setStreakData(data);
     }
-  }, [userLocation]);
+  };
 
-  const fetchNearbyGyms = async () => {
-    if (!userLocation) return;
+  const fetchRecentWorkouts = async () => {
+    if (!user) return;
 
-    setLoadingGyms(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('fetch-nearby-gyms', {
-        body: {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          radius: 5000, // 5km radius
-        },
+    const { data } = await supabase
+      .from('weight_records')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('recorded_at', { ascending: false })
+      .limit(5);
+
+    if (data) {
+      setRecentWorkouts(data);
+    }
+  };
+
+  const handleLogWorkout = async () => {
+    if (!user || !workoutLog.exercise || !workoutLog.weight || !workoutLog.reps || !workoutLog.sets) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields to log your workout.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save workout record
+      const { error } = await supabase
+        .from('weight_records')
+        .insert({
+          user_id: user.id,
+          weight: parseFloat(workoutLog.weight),
+          notes: `${workoutLog.exercise} - ${workoutLog.sets} sets x ${workoutLog.reps} reps`
+        });
 
       if (error) throw error;
 
-      setGyms(data.gyms || []);
-    } catch (error) {
-      console.error('Error fetching gyms:', error);
+      // Update total workouts
+      const { error: statsError } = await supabase
+        .from('leaderboard_stats')
+        .update({
+          total_workouts: (streakData?.total_workouts || 0) + 1
+        })
+        .eq('user_id', user.id);
+
+      if (statsError) throw statsError;
+
       toast({
-        title: "Error loading gyms",
-        description: "Failed to load nearby gyms. Please try again.",
+        title: "Workout logged!",
+        description: "Great job! Keep up the momentum! 💪",
+      });
+
+      // Reset form and refresh data
+      setWorkoutLog({ exercise: "", weight: "", reps: "", sets: "" });
+      fetchStreakData();
+      fetchRecentWorkouts();
+    } catch (error: any) {
+      console.error('Error logging workout:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to log workout. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setLoadingGyms(false);
+      setSaving(false);
     }
   };
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Return as number for sorting
-  };
-
-  // Filter and sort gyms
-  const filteredAndSortedGyms = useMemo(() => {
-    if (!userLocation) return [];
-
-    // Add distance to each gym
-    const gymsWithDistance = gyms.map(gym => ({
-      ...gym,
-      distance: calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        gym.latitude,
-        gym.longitude
-      )
-    }));
-
-    // Filter by search query
-    let filtered = gymsWithDistance;
-    const hasSearchQuery = searchQuery.trim().length > 0;
-    
-    if (hasSearchQuery) {
-      // If searching, show all matching gyms regardless of quality
-      filtered = gymsWithDistance.filter(gym =>
-        gym.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gym.address?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    } else {
-      // If not searching, filter out low-quality gyms
-      filtered = gymsWithDistance.filter(gym => {
-        // Must have at least 10 reviews AND rating must be above 1.0
-        const hasEnoughReviews = gym.user_ratings_total && gym.user_ratings_total >= 10;
-        const hasDecentRating = gym.rating && gym.rating > 1.0;
-        return hasEnoughReviews && hasDecentRating;
-      });
-    }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === "distance") {
-        return a.distance - b.distance;
-      } else if (sortBy === "rating") {
-        // Sort by rating descending (highest first), handle null ratings
-        const ratingA = a.rating || 0;
-        const ratingB = b.rating || 0;
-        return ratingB - ratingA;
-      } else if (sortBy === "reviews") {
-        // Sort by number of reviews descending (most reviews first)
-        const reviewsA = a.user_ratings_total || 0;
-        const reviewsB = b.user_ratings_total || 0;
-        return reviewsB - reviewsA;
-      }
-      return 0;
-    });
-
-    return sorted;
-  }, [gyms, userLocation, searchQuery, sortBy]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
-  };
-
-  const handleCreateTestFriend = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await supabase.functions.invoke('create-test-friend', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-
-      if (response.error) throw response.error;
-
-      toast({
-        title: "Test friend created!",
-        description: "Alex Thompson is now your friend. Check Messages to chat!"
-      });
-    } catch (error) {
-      console.error('Error creating test friend:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create test friend",
-        variant: "destructive"
-      });
-    }
   };
 
   // Early returns AFTER all hooks are called
@@ -222,10 +163,9 @@ const Index = () => {
   }
 
   if (!user) {
-    return null; // Will redirect to auth
+    return null;
   }
 
-  // Main authenticated view
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -261,6 +201,10 @@ const Index = () => {
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/my-gyms')}>
+                  <MapPin className="w-4 h-4 mr-2" />
+                  My Gyms
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/messages')}>
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Messages
@@ -270,11 +214,6 @@ const Index = () => {
                   Friend Requests
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleCreateTestFriend}>
-                  <Users className="w-4 h-4 mr-2" />
-                  Create Test Friend
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile-setup')}>
                   <User className="w-4 h-4 mr-2" />
                   Edit Profile
@@ -282,10 +221,6 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => navigate('/settings')}>
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast({ title: "Coming soon!", description: "Workout history feature is under development." })}>
-                  <History className="w-4 h-4 mr-2" />
-                  History
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
@@ -300,125 +235,185 @@ const Index = () => {
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Gyms Near You</h1>
-          <p className="text-muted-foreground">Discover your perfect fitness community</p>
+          <h1 className="text-3xl font-bold mb-2">Workout Logger</h1>
+          <p className="text-muted-foreground">Track your progress and stay motivated</p>
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search gyms by name or location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-            <Select value={sortBy} onValueChange={(value: "distance" | "rating" | "reviews") => setSortBy(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="distance">Distance</SelectItem>
-                <SelectItem value="rating">Rating</SelectItem>
-                <SelectItem value="reviews">Reviews</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Quick Actions */}
+        <div className="grid gap-4 mb-8">
+          <Button 
+            variant="fitness" 
+            size="lg" 
+            className="w-full"
+            onClick={() => navigate('/gyms-near-you')}
+          >
+            <MapPin className="w-5 h-5 mr-2" />
+            Find Gyms Near You
+          </Button>
         </div>
 
-        {loadingGyms ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : filteredAndSortedGyms.length === 0 ? (
-          <Card className="p-8 text-center">
-            {searchQuery ? (
-              <>
-                <p className="text-muted-foreground">No gyms found matching "{searchQuery}"</p>
-                <Button onClick={() => setSearchQuery("")} className="mt-4" variant="outline">
-                  Clear Search
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground">No gyms found nearby. Try adjusting your location permissions.</p>
-                <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
-                  Retry
-                </Button>
-              </>
-            )}
+        {/* Streak Stats */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-gradient-primary text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Current Streak</p>
+                  <p className="text-3xl font-bold mt-1">{streakData?.current_streak || 0}</p>
+                  <p className="text-xs opacity-75 mt-1">days</p>
+                </div>
+                <Flame className="w-12 h-12 opacity-80" />
+              </div>
+            </CardContent>
           </Card>
-        ) : (
-          <>
-            <div className="mb-4 text-sm text-muted-foreground">
-              Showing {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
-              {searchQuery && ` matching "${searchQuery}"`}
-            </div>
-            <div className="grid gap-6">
-              {filteredAndSortedGyms.map((gym) => (
-                <Card 
-                  key={gym.id} 
-                  className="hover:shadow-card transition-all duration-300 cursor-pointer"
-                  onClick={() => navigate(`/gym/${gym.id}`)}
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Longest Streak</p>
+                  <p className="text-3xl font-bold mt-1">{streakData?.longest_streak || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">days</p>
+                </div>
+                <TrendingUp className="w-12 h-12 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Workouts</p>
+                  <p className="text-3xl font-bold mt-1">{streakData?.total_workouts || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">completed</p>
+                </div>
+                <Calendar className="w-12 h-12 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Log Workout Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Log Today's Workout</CardTitle>
+              <CardDescription>Track your exercises to maintain your streak</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="exercise">Exercise</Label>
+                <Select 
+                  value={workoutLog.exercise} 
+                  onValueChange={(value) => setWorkoutLog(prev => ({ ...prev, exercise: value }))}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      {gym.photo_url && (
-                        <img 
-                          src={gym.photo_url} 
-                          alt={gym.name}
-                          className="w-16 h-16 rounded-lg object-cover"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-lg">{gym.name}</h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {gym.rating && (
-                                <>
-                                  <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 fill-warning text-warning" />
-                                    <span>{gym.rating}</span>
-                                  </div>
-                                  <span>•</span>
-                                </>
-                              )}
-                              <span>{gym.distance.toFixed(1)} km away</span>
-                              {gym.user_ratings_total && (
-                                <>
-                                  <span>•</span>
-                                  <span>{gym.user_ratings_total} reviews</span>
-                                </>
-                              )}
-                            </div>
-                            {gym.address && (
-                              <p className="text-xs text-muted-foreground mt-1">{gym.address}</p>
-                            )}
-                          </div>
-                          <Button variant="fitness">
-                            View Details
-                          </Button>
+                  <SelectTrigger id="exercise">
+                    <SelectValue placeholder="Select exercise" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bench Press">Bench Press</SelectItem>
+                    <SelectItem value="Squat">Squat</SelectItem>
+                    <SelectItem value="Deadlift">Deadlift</SelectItem>
+                    <SelectItem value="Overhead Press">Overhead Press</SelectItem>
+                    <SelectItem value="Barbell Row">Barbell Row</SelectItem>
+                    <SelectItem value="Pull-ups">Pull-ups</SelectItem>
+                    <SelectItem value="Dips">Dips</SelectItem>
+                    <SelectItem value="Leg Press">Leg Press</SelectItem>
+                    <SelectItem value="Lat Pulldown">Lat Pulldown</SelectItem>
+                    <SelectItem value="Cable Flyes">Cable Flyes</SelectItem>
+                    <SelectItem value="Leg Curl">Leg Curl</SelectItem>
+                    <SelectItem value="Leg Extension">Leg Extension</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight (lbs)</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    placeholder="135"
+                    value={workoutLog.weight}
+                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, weight: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reps">Reps</Label>
+                  <Input
+                    id="reps"
+                    type="number"
+                    placeholder="10"
+                    value={workoutLog.reps}
+                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, reps: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sets">Sets</Label>
+                  <Input
+                    id="sets"
+                    type="number"
+                    placeholder="3"
+                    value={workoutLog.sets}
+                    onChange={(e) => setWorkoutLog(prev => ({ ...prev, sets: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleLogWorkout} 
+                disabled={saving}
+                className="w-full"
+                variant="fitness"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Log Workout
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Recent Workouts */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Workouts</CardTitle>
+              <CardDescription>Your last 5 logged workouts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentWorkouts.length === 0 ? (
+                <div className="text-center py-8">
+                  <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-sm">No workouts logged yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Start logging to track your progress!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentWorkouts.map((workout) => (
+                    <div key={workout.id} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{workout.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {workout.weight} lbs
+                          </p>
                         </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {new Date(workout.recorded_at).toLocaleDateString()}
+                        </Badge>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="mt-8 text-center">
-              <Button variant="outline" size="lg" onClick={fetchNearbyGyms} disabled={loadingGyms}>
-                {loadingGyms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Refresh Gyms
-              </Button>
-            </div>
-          </>
-        )}
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ import { ThemeProvider } from "next-themes";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Index from "./pages/Index";
 import GymDetails from "./pages/GymDetails";
+import GymsNearYou from "./pages/GymsNearYou";
+import MyGyms from "./pages/MyGyms";
 import ProfileSetup from "./pages/ProfileSetup";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -32,6 +34,8 @@ const AppContent = () => {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/gym/:gymId" element={<GymDetails />} />
+          <Route path="/gyms-near-you" element={<GymsNearYou />} />
+          <Route path="/my-gyms" element={<MyGyms />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/messages" element={<Messages />} />
