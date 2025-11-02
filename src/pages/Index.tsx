@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Loader2, Plus, Flame, Trash2, TrendingUp, Calendar, Dumbbell } from "lucide-react";
+import { MapPin, Loader2, Plus, Flame, Trash2, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { workoutService } from "@/services/workoutService";
-import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { EmptyState } from "@/components/EmptyState";
 import { EXERCISES } from "@/constants/exercises";
@@ -203,13 +205,84 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader
-        title="The Spot"
-        showMessagesButton
-        showProfileMenu
-        profile={profile}
-        onSignOut={handleSignOut}
-      />
+      {/* Custom Header with Logo and Full Menu */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center">
+              <Dumbbell className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-xl">The Spot</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(ROUTES.MESSAGES)}
+              className="flex-shrink-0"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+
+            {profile && (
+              <>
+                <Badge variant="secondary" className="hidden sm:flex">
+                  Welcome {profile.display_name || profile.username || 'User'}!
+                </Badge>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full flex-shrink-0">
+                      <Avatar>
+                        <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
+                        <AvatarFallback>{profile.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium">{profile.display_name || profile.username || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.MY_GYMS)}>
+                      <MapPin className="mr-2 h-4 w-4" />
+                      My Gyms
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.MESSAGES)}>
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Messages
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_REQUESTS)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Friend Requests
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_RECOMMENDATIONS)}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Find Friends
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE_SETUP)}>
+                      <User className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)}>
+                      <SettingsIcon className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
