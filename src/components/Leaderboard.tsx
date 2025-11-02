@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
+import { Trophy, Medal, Award, TrendingUp, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,9 +11,11 @@ import type { LeaderboardEntry } from "@/types/components";
 
 interface LeaderboardProps {
   gymName: string;
+  hasJoined?: boolean;
+  onJoinGym?: () => void;
 }
 
-const Leaderboard = ({ gymName }: LeaderboardProps) => {
+const Leaderboard = ({ gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
   const { user } = useAuth();
   const [benchData, setBenchData] = useState<LeaderboardEntry[]>([]);
   const [squatData, setSquatData] = useState<LeaderboardEntry[]>([]);
@@ -164,6 +167,24 @@ const Leaderboard = ({ gymName }: LeaderboardProps) => {
       </div>
     );
   };
+
+  if (hasJoined === false && onJoinGym) {
+    return (
+      <Card className="text-center p-8">
+        <CardContent>
+          <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-semibold mb-2">Join to See Leaderboards</h3>
+          <p className="text-muted-foreground mb-4">
+            See who's leading in bench press, squat, and deadlift competitions!
+          </p>
+          <Button variant="fitness" onClick={onJoinGym}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Join Gym
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

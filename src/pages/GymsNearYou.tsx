@@ -1,18 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, Loader2, Search, SlidersHorizontal, ArrowLeft } from "lucide-react";
+import { Star, Loader2, Search, SlidersHorizontal, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { calculateDistance, formatDistance } from "@/utils/distance";
 
 const GymsNearYou = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { handleError } = useErrorHandler();
   const [gyms, setGyms] = useState<any[]>([]);
   const [loadingGyms, setLoadingGyms] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -31,17 +32,12 @@ const GymsNearYou = () => {
         },
         (error) => {
           console.error('Error getting location:', error);
-          toast({
-            title: "Location access denied",
-            description: "Using default location. Please enable location access for better results.",
-            variant: "destructive",
-          });
-          // Default to a location (e.g., New York City)
+          handleError(error, "Location access denied. Using default location. Please enable location access for better results.");
           setUserLocation({ latitude: 40.7128, longitude: -74.0060 });
         }
       );
     }
-  }, [user, toast]);
+  }, [user, handleError]);
 
   // Fetch gyms when location is available
   useEffect(() => {
@@ -67,27 +63,10 @@ const GymsNearYou = () => {
 
       setGyms(data.gyms || []);
     } catch (error) {
-      console.error('Error fetching gyms:', error);
-      toast({
-        title: "Error loading gyms",
-        description: "Failed to load nearby gyms. Please try again.",
-        variant: "destructive",
-      });
+      handleError(error, "Failed to load nearby gyms. Please try again.");
     } finally {
       setLoadingGyms(false);
     }
-  };
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
   };
 
   // Filter and sort gyms
@@ -243,10 +222,10 @@ const GymsNearYou = () => {
                                     <Star className="w-4 h-4 fill-warning text-warning" />
                                     <span>{gym.rating}</span>
                                   </div>
-                                  <span>•</span>
+                                   <span>•</span>
                                 </>
                               )}
-                              <span>{gym.distance.toFixed(1)} km away</span>
+                              <span>{formatDistance(gym.distance)} away</span>
                               {gym.user_ratings_total && (
                                 <>
                                   <span>•</span>

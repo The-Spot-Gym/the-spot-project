@@ -1,24 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Loader2, Plus, Flame, Trash2, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { MapPin, Loader2, Flame, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { workoutService } from "@/services/workoutService";
 import { StatCard } from "@/components/StatCard";
-import { EmptyState } from "@/components/EmptyState";
-import { EXERCISES } from "@/constants/exercises";
 import { ROUTES } from "@/constants/routes";
 import { useWorkoutLogger } from "@/hooks/useWorkoutLogger";
+import { WorkoutForm } from "@/components/workout/WorkoutForm";
+import { RecentWorkouts } from "@/components/workout/RecentWorkouts";
 import Welcome from "./Welcome";
 import type { WorkoutSession, LeaderboardStats } from "@/types";
 
@@ -26,7 +21,6 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { toast } = useToast();
   const [streakData, setStreakData] = useState<LeaderboardStats | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutSession[]>([]);
 
@@ -259,143 +253,16 @@ const Index = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Log Workout Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Log Today's Workout</CardTitle>
-              <CardDescription>Add multiple exercises to create a complete workout</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="exercise">Exercise</Label>
-                <Select 
-                  value={currentExercise.exercise} 
-                  onValueChange={(value) => setCurrentExercise(prev => ({ ...prev, exercise: value }))}
-                >
-                  <SelectTrigger id="exercise">
-                    <SelectValue placeholder="Select exercise" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {EXERCISES.map(exercise => (
-                      <SelectItem key={exercise} value={exercise}>{exercise}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (lbs)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    placeholder="135"
-                    value={currentExercise.weight}
-                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, weight: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reps">Reps</Label>
-                  <Input
-                    id="reps"
-                    type="number"
-                    placeholder="10"
-                    value={currentExercise.reps}
-                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, reps: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sets">Sets</Label>
-                  <Input
-                    id="sets"
-                    type="number"
-                    placeholder="3"
-                    value={currentExercise.sets}
-                    onChange={(e) => setCurrentExercise(prev => ({ ...prev, sets: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleAddExercise}
-                className="w-full"
-                variant="outline"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Exercise
-              </Button>
-
-              {/* Current Session Exercises */}
-              {exercisesInSession.length > 0 && (
-                <div className="space-y-2 pt-4 border-t">
-                  <Label>Exercises in this workout ({exercisesInSession.length})</Label>
-                  <div className="space-y-2">
-                    {exercisesInSession.map((ex, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{ex.exercise}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {ex.sets} sets × {ex.reps} reps @ {ex.weight} lbs
-                          </p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => removeExerciseFromSession(index)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Button 
-                onClick={handleLogWorkout} 
-                disabled={saving || exercisesInSession.length === 0}
-                className="w-full"
-                variant="fitness"
-              >
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Complete Workout {exercisesInSession.length > 0 && `(${exercisesInSession.length} exercises)`}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Recent Workouts */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Workouts</CardTitle>
-              <CardDescription>Your last 5 workout sessions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentWorkouts.length === 0 ? (
-                <EmptyState
-                  icon={Dumbbell}
-                  title="No workouts logged yet"
-                  description="Start logging to track your progress!"
-                />
-              ) : (
-                <div className="space-y-4">
-                  {recentWorkouts.map((workout) => (
-                    <div key={workout.id} className="p-4 border rounded-lg space-y-2">
-                      <div className="flex justify-between items-center">
-                        <p className="font-medium">
-                          {new Date(workout.session_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {workout.notes && (
-                        <p className="text-sm text-muted-foreground">{workout.notes}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <WorkoutForm 
+            currentExercise={currentExercise}
+            exercisesInSession={exercisesInSession}
+            saving={saving}
+            onExerciseChange={setCurrentExercise}
+            onAddExercise={handleAddExercise}
+            onRemoveExercise={removeExerciseFromSession}
+            onCompleteWorkout={handleLogWorkout}
+          />
+          <RecentWorkouts workouts={recentWorkouts} />
         </div>
       </div>
     </div>
