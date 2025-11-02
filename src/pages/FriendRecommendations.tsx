@@ -11,12 +11,13 @@ import { useFriends } from "@/hooks/useFriends";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ROUTES } from "@/constants/routes";
+import type { FriendRecommendation } from "@/types/components";
 
 const FriendRecommendations = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { sendRequest } = useFriends();
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<FriendRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingRequests, setSendingRequests] = useState<Set<string>>(new Set());
 

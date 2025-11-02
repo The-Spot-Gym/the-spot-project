@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useConversationDetails } from "@/hooks/useConversationDetails";
+import type { MessageWithProfile } from "@/types/api";
 
 const Chat = () => {
   const { conversationId } = useParams();
@@ -66,8 +67,8 @@ const Chat = () => {
     }
     
     const otherParticipant = participants.find(p => p.user_id !== user?.id);
-    return otherParticipant?.profiles?.display_name || 
-           otherParticipant?.profiles?.username || 
+    return otherParticipant?.display_name || 
+           otherParticipant?.username || 
            'Chat';
   };
 
@@ -98,7 +99,7 @@ const Chat = () => {
     }
   };
 
-  const shouldShowDateDivider = (currentMsg: any, prevMsg: any) => {
+  const shouldShowDateDivider = (currentMsg: MessageWithProfile, prevMsg: MessageWithProfile | undefined) => {
     if (!prevMsg) return true;
     
     const currentDate = new Date(currentMsg.created_at).toDateString();
@@ -117,8 +118,8 @@ const Chat = () => {
           </Button>
           {!conversation?.is_group && participants.length > 0 && (
             <Avatar className="w-10 h-10">
-              {participants.find(p => p.user_id !== user?.id)?.profiles?.avatar_url && (
-                <AvatarImage src={participants.find(p => p.user_id !== user?.id)?.profiles?.avatar_url} />
+              {participants.find(p => p.user_id !== user?.id)?.avatar_url && (
+                <AvatarImage src={participants.find(p => p.user_id !== user?.id)?.avatar_url || undefined} />
               )}
               <AvatarFallback>
                 {getConversationTitle()[0]}

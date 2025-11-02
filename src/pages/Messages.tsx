@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ROUTES } from "@/constants/routes";
 import { conversationService } from "@/services/conversationService";
 import type { Profile } from "@/types";
+import type { ConversationWithData } from "@/types/components";
 
 const Messages = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ const Messages = () => {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [groupName, setGroupName] = useState("");
   const [showNewChat, setShowNewChat] = useState(false);
-  const [conversationsWithData, setConversationsWithData] = useState<any[]>([]);
+  const [conversationsWithData, setConversationsWithData] = useState<ConversationWithData[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Fetch conversation details using service
@@ -90,7 +91,7 @@ const Messages = () => {
     }
   };
 
-  const getConversationName = (convo: any) => {
+  const getConversationName = (convo: ConversationWithData) => {
     if (convo.is_group) {
       return convo.name || 'Group Chat';
     }
@@ -99,7 +100,7 @@ const Messages = () => {
            'Unknown';
   };
 
-  const getConversationAvatar = (convo: any) => {
+  const getConversationAvatar = (convo: ConversationWithData) => {
     if (!convo.is_group && convo.participants[0]) {
       return convo.participants[0].avatar_url;
     }

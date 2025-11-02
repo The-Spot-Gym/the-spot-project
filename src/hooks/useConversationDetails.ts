@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { conversationService } from '@/services/conversationService';
 import { supabase } from '@/integrations/supabase/client';
+import type { Conversation, Profile } from '@/types';
+import type { MessageWithProfile } from '@/types/api';
 
 export const useConversationDetails = (conversationId: string | undefined, userId: string | undefined) => {
-  const [conversation, setConversation] = useState<any>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [participants, setParticipants] = useState<Profile[]>([]);
+  const [messages, setMessages] = useState<MessageWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

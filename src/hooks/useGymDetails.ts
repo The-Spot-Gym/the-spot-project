@@ -2,27 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@/types';
+import type { GymDetailsResponse, GymMemberData } from '@/types/api';
 
-interface GymDetailsData {
+type GymDetailsData = GymDetailsResponse['gym'];
+
+interface CurrentUser {
   id: string;
-  name: string;
-  address?: string;
-  rating?: number;
-  user_ratings_total?: number;
-  phone_number?: string;
-  website?: string;
-  photo_url?: string;
-  photos?: string[];
-  reviews?: any[];
-  opening_hours?: any;
-  latitude: number;
-  longitude: number;
-}
-
-interface GymMemberData {
-  user_id: string;
-  joined_at: string;
-  profiles: Profile;
+  email?: string;
 }
 
 export const useGymDetails = (gymId: string | undefined) => {
@@ -31,7 +17,7 @@ export const useGymDetails = (gymId: string | undefined) => {
   const [loading, setLoading] = useState(true);
   const [hasJoined, setHasJoined] = useState(false);
   const [gymMembers, setGymMembers] = useState<GymMemberData[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     fetchGymDetails();

@@ -63,7 +63,7 @@ export interface LeaderboardStats {
   current_streak: number;
   longest_streak: number;
   favorite_exercise: string | null;
-  personal_records: any; // JSONB type from database
+  personal_records: any; // JSONB from database - flexible type for JSON data
   created_at: string;
   updated_at: string;
 }
@@ -141,3 +141,20 @@ export interface GymWithMembership extends Gym {
 export interface WorkoutSessionWithExercises extends WorkoutSession {
   exercises?: WorkoutExercise[];
 }
+
+// Re-export from other type files
+export type { 
+  GymDetailsResponse,
+  GymReview,
+  OpeningHours,
+  GymMemberData,
+  MessageWithProfile,
+  ConversationParticipantWithProfile
+} from './api';
+
+export type {
+  ConversationWithData,
+  FriendRecommendation,
+  Exercise,
+  LeaderboardEntry
+} from './components';

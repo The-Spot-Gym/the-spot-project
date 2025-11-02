@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface Exercise {
-  exercise: string;
-  weight: string;
-  reps: string;
-  sets: string;
-}
+import type { Exercise } from '@/types/components';
 
 export const useWorkoutLogger = (userId: string | undefined) => {
   const { toast } = useToast();

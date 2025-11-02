@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Conversation, Message, Profile } from '@/types';
+import type { MessageWithProfile } from '@/types/api';
 
 interface ConversationWithDetails extends Conversation {
   lastMessage?: Message;
@@ -76,7 +77,7 @@ export const conversationService = {
   /**
    * Get messages with sender profiles
    */
-  async getMessagesWithProfiles(conversationId: string): Promise<any[]> {
+  async getMessagesWithProfiles(conversationId: string): Promise<MessageWithProfile[]> {
     const messages = await this.getMessages(conversationId);
 
     if (messages.length === 0) return [];

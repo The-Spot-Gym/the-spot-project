@@ -6,15 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
-interface LeaderboardEntry {
-  rank: number;
-  name: string;
-  avatar?: string;
-  weight: number;
-  improvement: number;
-  isCurrentUser?: boolean;
-}
+import type { LeaderboardEntry } from "@/types/components";
 
 interface LeaderboardProps {
   gymName: string;
