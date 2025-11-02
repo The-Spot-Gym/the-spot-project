@@ -49,6 +49,29 @@ const Index = () => {
     };
 
     fetchStreakData();
+
+    // Set up real-time subscription for leaderboard stats
+    if (user) {
+      const channel = supabase
+        .channel('stats-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'leaderboard_stats',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            fetchStreakData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   // Fetch recent workouts
@@ -123,7 +146,7 @@ const Index = () => {
 
       if (sessionError) throw sessionError;
 
-      // Insert all exercises
+      // Insert all exercises (triggers will auto-update leaderboard stats)
       const exercisesToInsert = exercisesInSession.map(ex => ({
         session_id: session.id,
         exercise_name: ex.exercise,
@@ -137,27 +160,6 @@ const Index = () => {
         .insert(exercisesToInsert);
 
       if (exercisesError) throw exercisesError;
-
-      // Also create weight_records for backward compatibility with streak tracking
-      const { error: weightError } = await supabase
-        .from('weight_records')
-        .insert({
-          user_id: user.id,
-          weight: parseFloat(exercisesInSession[0].weight),
-          notes: `Workout: ${exercisesInSession.map(e => e.exercise).join(', ')}`
-        });
-
-      if (weightError) throw weightError;
-
-      // Update total workouts
-      const { error: statsError } = await supabase
-        .from('leaderboard_stats')
-        .update({
-          total_workouts: (streakData?.total_workouts || 0) + 1
-        })
-        .eq('user_id', user.id);
-
-      if (statsError) throw statsError;
 
       toast({
         title: "Workout logged!",

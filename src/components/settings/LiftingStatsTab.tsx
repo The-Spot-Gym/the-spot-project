@@ -83,9 +83,15 @@ export const LiftingStatsTab = () => {
           <Dumbbell className="w-5 h-5" />
           Personal Records
         </CardTitle>
-        <CardDescription>Track your best lifts (in lbs)</CardDescription>
+        <CardDescription>
+          Your best lifts are automatically tracked from your workouts. Update them here if needed.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+          💡 Tip: These stats sync automatically when you log workouts! Manual updates are optional.
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="benchPress">Bench Press (lbs)</Label>
           <Input
@@ -121,7 +127,7 @@ export const LiftingStatsTab = () => {
 
         <Button onClick={handleSaveLiftingStats} disabled={loading}>
           <Save className="w-4 h-4 mr-2" />
-          {loading ? 'Saving...' : 'Save Stats'}
+          {loading ? 'Saving...' : 'Manually Update Stats'}
         </Button>
       </CardContent>
     </Card>
