@@ -1,39 +1,33 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Leaderboard from "@/components/Leaderboard";
 import { useGymDetails } from "@/hooks/useGymDetails";
+import { useGymMembers } from "@/hooks/useGymMembers";
+import { useGymReviews } from "@/hooks/useGymReviews";
+import { useGymMembership } from "@/hooks/useGymMembership";
 import { GymHeader } from "@/components/gym/GymHeader";
 import { GymInfo } from "@/components/gym/GymInfo";
 import { GymReviewsList } from "@/components/gym/GymReviewsList";
 import { GymMembersList } from "@/components/gym/GymMembersList";
+import { LoadingState } from "@/components/LoadingState";
 
 const GymDetails = () => {
   const { gymId } = useParams();
   const navigate = useNavigate();
 
-  const { 
-    gymData, 
-    loading, 
-    hasJoined,
-    gymMembers,
-    currentUser,
-    joinGym, 
-    leaveGym 
-  } = useGymDetails(gymId);
+  const { gymData, loading: gymLoading, currentUser } = useGymDetails(gymId || null);
+  const { members, loading: membersLoading } = useGymMembers(gymId || null);
+  const { reviews, loading: reviewsLoading } = useGymReviews(gymId || null);
+  const { isMember, joinGym, leaveGym } = useGymMembership(gymId || null);
 
   const handleSendFriendRequest = (memberName: string) => {
     console.log(`Sending friend request to ${memberName}`);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+  if (gymLoading) {
+    return <LoadingState message="Loading gym details..." fullScreen />;
   }
 
   if (!gymData) {
@@ -53,7 +47,7 @@ const GymDetails = () => {
     <div className="min-h-screen bg-background">
       <GymHeader 
         gymData={gymData}
-        hasJoined={hasJoined}
+        hasJoined={isMember}
         onBack={() => navigate('/')}
         onJoin={joinGym}
         onLeave={leaveGym}
@@ -63,7 +57,7 @@ const GymDetails = () => {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({gymData.reviews?.length || 0})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
           </TabsList>
@@ -75,22 +69,30 @@ const GymDetails = () => {
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6">
-            <GymReviewsList reviews={gymData.reviews || []} />
+            {reviewsLoading ? (
+              <LoadingState message="Loading reviews..." />
+            ) : (
+              <GymReviewsList reviews={reviews} />
+            )}
           </TabsContent>
 
           <TabsContent value="members" className="mt-6">
-            <GymMembersList 
-              hasJoined={hasJoined}
-              members={gymMembers}
-              currentUserId={currentUser?.id}
-              gymName={gymData.name}
-              onJoinGym={joinGym}
-              onAddFriend={handleSendFriendRequest}
-            />
+            {membersLoading ? (
+              <LoadingState message="Loading members..." />
+            ) : (
+              <GymMembersList 
+                hasJoined={isMember}
+                members={members}
+                currentUserId={currentUser?.id}
+                gymName={gymData.name}
+                onJoinGym={joinGym}
+                onAddFriend={handleSendFriendRequest}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="leaderboard" className="mt-6">
-            <Leaderboard gymName={gymData.name} hasJoined={hasJoined} onJoinGym={joinGym} />
+            <Leaderboard gymName={gymData.name} hasJoined={isMember} onJoinGym={joinGym} />
           </TabsContent>
         </Tabs>
       </div>

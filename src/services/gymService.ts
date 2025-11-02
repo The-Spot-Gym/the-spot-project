@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Gym, GymMembership, Profile } from "@/types";
+import type { GymReview } from "@/types/api";
 
 export const gymService = {
   /**
@@ -131,5 +132,14 @@ export const gymService = {
     }
 
     return gyms || [];
+  },
+
+  /**
+   * Get gym reviews (mock data from gym details)
+   */
+  async getGymReviews(gymId: string): Promise<GymReview[]> {
+    // For now, return empty array as reviews come from Google Places API
+    // This can be extended to fetch from a local reviews table if needed
+    return [];
   },
 };

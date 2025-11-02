@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Loader2, Flame, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { MapPin, Flame, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +14,7 @@ import { ROUTES } from "@/constants/routes";
 import { useWorkoutLogger } from "@/hooks/useWorkoutLogger";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
 import { RecentWorkouts } from "@/components/workout/RecentWorkouts";
+import { LoadingState } from "@/components/LoadingState";
 import Welcome from "./Welcome";
 import type { WorkoutSession, LeaderboardStats } from "@/types";
 
@@ -118,11 +119,7 @@ const Index = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-white animate-spin" />
-      </div>
-    );
+    return <LoadingState message="Loading..." fullScreen />;
   }
 
   if (!user) {
