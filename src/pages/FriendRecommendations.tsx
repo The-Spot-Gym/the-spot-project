@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Users, MapPin } from "lucide-react";
+import { UserPlus, Users, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useFriends } from "@/hooks/useFriends";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { ROUTES } from "@/constants/routes";
 
 const FriendRecommendations = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { sendRequest } = useFriends();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingRequests, setSendingRequests] = useState<Set<string>>(new Set());
@@ -35,69 +38,42 @@ const FriendRecommendations = () => {
       setRecommendations(data || []);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load friend recommendations",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  const sendFriendRequest = async (friendId: string) => {
-    try {
-      setSendingRequests(prev => new Set(prev).add(friendId));
-
-      const { error } = await supabase
-        .from('friendships')
-        .insert({
-          user_id: user?.id,
-          friend_id: friendId,
-          status: 'pending'
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Friend request sent",
-        description: "Your friend request has been sent successfully"
-      });
-
-      // Remove from recommendations
+  const handleSendFriendRequest = async (friendId: string) => {
+    setSendingRequests(prev => new Set(prev).add(friendId));
+    
+    const success = await sendRequest(friendId);
+    
+    if (success) {
       setRecommendations(prev => prev.filter(rec => rec.user_id !== friendId));
-    } catch (error: any) {
-      console.error('Error sending friend request:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send friend request",
-        variant: "destructive"
-      });
-    } finally {
-      setSendingRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(friendId);
-        return newSet;
-      });
     }
+    
+    setSendingRequests(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(friendId);
+      return newSet;
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader title="Friend Recommendations" showBackButton />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b p-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold">Friend Recommendations</h1>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Friend Recommendations" showBackButton onBack={() => navigate(ROUTES.HOME)} />
 
-      {/* Content */}
       <main className="max-w-4xl mx-auto p-4">
         <Card className="mb-6">
           <CardHeader>
@@ -111,19 +87,15 @@ const FriendRecommendations = () => {
           </CardHeader>
         </Card>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading recommendations...</p>
-          </div>
-        ) : recommendations.length === 0 ? (
+        {recommendations.length === 0 ? (
           <Card className="p-8">
-            <div className="text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No recommendations yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Visit gyms and log workouts to find people who work out at the same places
-              </p>
-              <Button onClick={() => navigate('/gyms-near-you')}>
+            <EmptyState
+              icon={Users}
+              title="No recommendations yet"
+              description="Visit gyms and log workouts to find people who work out at the same places"
+            />
+            <div className="text-center mt-4">
+              <Button onClick={() => navigate(ROUTES.GYMS_NEAR_YOU)}>
                 Find Gyms Near You
               </Button>
             </div>
@@ -133,8 +105,8 @@ const FriendRecommendations = () => {
             {recommendations.map((recommendation) => (
               <Card key={recommendation.user_id}>
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="w-14 h-14">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <Avatar className="w-14 h-14 flex-shrink-0">
                       {recommendation.avatar_url && (
                         <AvatarImage src={recommendation.avatar_url} />
                       )}
@@ -144,18 +116,18 @@ const FriendRecommendations = () => {
                     </Avatar>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-lg truncate">
                             {recommendation.display_name || recommendation.username}
                           </h3>
                           {recommendation.username && recommendation.display_name !== recommendation.username && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground truncate">
                               @{recommendation.username}
                             </p>
                           )}
                           <div className="flex items-center gap-2 mt-2">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm text-muted-foreground">
                               {recommendation.shared_gyms_count} shared {recommendation.shared_gyms_count === 1 ? 'gym' : 'gyms'}
                             </span>
@@ -163,9 +135,10 @@ const FriendRecommendations = () => {
                         </div>
                         
                         <Button
-                          onClick={() => sendFriendRequest(recommendation.user_id)}
+                          onClick={() => handleSendFriendRequest(recommendation.user_id)}
                           disabled={sendingRequests.has(recommendation.user_id)}
                           size="sm"
+                          className="w-full sm:w-auto flex-shrink-0"
                         >
                           <UserPlus className="w-4 h-4 mr-2" />
                           {sendingRequests.has(recommendation.user_id) ? 'Sending...' : 'Add Friend'}

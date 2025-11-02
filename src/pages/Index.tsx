@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { workoutService } from "@/services/workoutService";
 import { PageHeader } from "@/components/PageHeader";
+import { StatCard } from "@/components/StatCard";
+import { EmptyState } from "@/components/EmptyState";
 import { EXERCISES } from "@/constants/exercises";
 import { ROUTES } from "@/constants/routes";
 import Welcome from "./Welcome";
@@ -230,44 +232,25 @@ const Index = () => {
 
         {/* Streak Stats */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-primary text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">Current Streak</p>
-                  <p className="text-3xl font-bold mt-1">{streakData?.current_streak || 0}</p>
-                  <p className="text-xs opacity-75 mt-1">days</p>
-                </div>
-                <Flame className="w-12 h-12 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Longest Streak</p>
-                  <p className="text-3xl font-bold mt-1">{streakData?.longest_streak || 0}</p>
-                  <p className="text-xs text-muted-foreground mt-1">days</p>
-                </div>
-                <TrendingUp className="w-12 h-12 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Workouts</p>
-                  <p className="text-3xl font-bold mt-1">{streakData?.total_workouts || 0}</p>
-                  <p className="text-xs text-muted-foreground mt-1">completed</p>
-                </div>
-                <Calendar className="w-12 h-12 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Current Streak"
+            value={streakData?.current_streak || 0}
+            sublabel="days"
+            icon={Flame}
+            variant="primary"
+          />
+          <StatCard
+            label="Longest Streak"
+            value={streakData?.longest_streak || 0}
+            sublabel="days"
+            icon={TrendingUp}
+          />
+          <StatCard
+            label="Total Workouts"
+            value={streakData?.total_workouts || 0}
+            sublabel="completed"
+            icon={Calendar}
+          />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
@@ -385,11 +368,11 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               {recentWorkouts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground text-sm">No workouts logged yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Start logging to track your progress!</p>
-                </div>
+                <EmptyState
+                  icon={Dumbbell}
+                  title="No workouts logged yet"
+                  description="Start logging to track your progress!"
+                />
               ) : (
                 <div className="space-y-4">
                   {recentWorkouts.map((workout) => (

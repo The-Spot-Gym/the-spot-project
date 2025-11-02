@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ROUTES } from "@/constants/routes";
 import Index from "./pages/Index";
 import GymDetails from "./pages/GymDetails";
 import GymsNearYou from "./pages/GymsNearYou";
@@ -55,7 +57,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
