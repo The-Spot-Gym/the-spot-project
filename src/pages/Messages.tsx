@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ROUTES } from "@/constants/routes";
-import { profileService } from "@/services/profileService";
+import { conversationService } from "@/services/conversationService";
 import type { Profile } from "@/types";
 
 const Messages = () => {
@@ -32,14 +32,14 @@ const Messages = () => {
   const [conversationsWithData, setConversationsWithData] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Fetch conversation details
+  // Fetch conversation details using service
   useEffect(() => {
-    if (!loading && conversations.length > 0) {
+    if (!loading && conversations.length > 0 && user) {
       fetchConversationDetails();
     } else {
       setLoadingData(loading);
     }
-  }, [conversations, loading]);
+  }, [conversations, loading, user]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -64,52 +64,10 @@ const Messages = () => {
   }, [user, refetch]);
 
   const fetchConversationDetails = async () => {
-    setLoadingData(true);
+    if (!user) return;
     
-    const conversationsWithDetails = await Promise.all(
-      conversations.map(async (conversation) => {
-        // Get last message
-        const { data: lastMessage } = await supabase
-          .from('messages')
-          .select('content, created_at, sender_id')
-          .eq('conversation_id', conversation.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        // Get participants
-        const { data: participants } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', conversation.id)
-          .neq('user_id', user?.id || '');
-
-        // Get participant profiles
-        const profiles: Profile[] = [];
-        if (participants && participants.length > 0) {
-          await Promise.all(
-            participants.map(async (p) => {
-              const profile = await profileService.getProfileByUserId(p.user_id);
-              if (profile) profiles.push(profile);
-            })
-          );
-        }
-
-        return {
-          ...conversation,
-          lastMessage,
-          participants: profiles
-        };
-      })
-    );
-
-    // Sort by last message time
-    conversationsWithDetails.sort((a, b) => {
-      const aTime = a.lastMessage?.created_at || a.created_at;
-      const bTime = b.lastMessage?.created_at || b.created_at;
-      return new Date(bTime).getTime() - new Date(aTime).getTime();
-    });
-
+    setLoadingData(true);
+    const conversationsWithDetails = await conversationService.getConversationsWithDetails(user.id);
     setConversationsWithData(conversationsWithDetails);
     setLoadingData(false);
   };

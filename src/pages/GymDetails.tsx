@@ -1,169 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Users, MessageCircle, UserPlus, Clock, Wifi, Car, Shield, Trophy, Phone, Globe, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Star, MapPin, Users, MessageCircle, UserPlus, Clock, Phone, Globe, Loader2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Leaderboard from "@/components/Leaderboard";
+import { useGymDetails } from "@/hooks/useGymDetails";
 
 const GymDetails = () => {
   const { gymId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [hasJoined, setHasJoined] = useState(false);
-  const [gymData, setGymData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchGymDetails();
-    checkUser();
-  }, [gymId]);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUser(user);
-    if (user && gymId) {
-      checkMembership(user.id);
-    }
-  };
-
-  const checkMembership = async (userId: string) => {
-    const { data } = await supabase
-      .from('gym_memberships')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('gym_id', gymId)
-      .eq('is_active', true)
-      .maybeSingle();
-    
-    setHasJoined(!!data);
-  };
-
-  const fetchGymDetails = async () => {
-    if (!gymId) return;
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('fetch-gym-details', {
-        body: { gymId },
-      });
-
-      if (error) throw error;
-
-      setGymData(data.gym);
-    } catch (error) {
-      console.error('Error fetching gym details:', error);
-      toast({
-        title: "Error loading gym details",
-        description: "Failed to load gym information. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const [gymMembers, setGymMembers] = useState<any[]>([]);
-
-  const fetchGymMembers = async () => {
-    if (!gymId) return;
-    
-    const { data, error } = await supabase
-      .from('gym_memberships')
-      .select(`
-        user_id,
-        joined_at,
-        profiles!inner(
-          display_name,
-          username,
-          avatar_url
-        )
-      `)
-      .eq('gym_id', gymId)
-      .eq('is_active', true);
-
-    if (error) {
-      console.error('Error fetching gym members:', error);
-      return;
-    }
-
-    setGymMembers(data || []);
-  };
-
-  useEffect(() => {
-    if (hasJoined) {
-      fetchGymMembers();
-    }
-  }, [hasJoined, gymId]);
-
-  const handleJoinGym = async () => {
-    if (!currentUser || !gymId) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to join a gym.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('gym_memberships')
-        .insert({
-          user_id: currentUser.id,
-          gym_id: gymId,
-          is_active: true
-        });
-
-      if (error) throw error;
-
-      setHasJoined(true);
-      toast({
-        title: "Success!",
-        description: `You've joined ${gymData?.name}!`,
-      });
-    } catch (error: any) {
-      console.error('Error joining gym:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to join gym. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLeaveGym = async () => {
-    if (!currentUser || !gymId) return;
-
-    try {
-      const { error } = await supabase
-        .from('gym_memberships')
-        .update({ is_active: false })
-        .eq('user_id', currentUser.id)
-        .eq('gym_id', gymId);
-
-      if (error) throw error;
-
-      setHasJoined(false);
-      toast({
-        title: "Left gym",
-        description: `You've left ${gymData?.name}`,
-      });
-    } catch (error: any) {
-      console.error('Error leaving gym:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to leave gym. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  const { 
+    gymData, 
+    loading, 
+    hasJoined,
+    gymMembers,
+    currentUser,
+    joinGym, 
+    leaveGym 
+  } = useGymDetails(gymId);
 
   const handleSendFriendRequest = (memberName: string) => {
     // Handle friend request logic
@@ -234,7 +93,7 @@ const GymDetails = () => {
           </div>
           <div className="flex gap-2 sm:absolute sm:right-4 sm:top-4">
             {!hasJoined ? (
-              <Button variant="fitness" onClick={handleJoinGym} size="sm" className="flex-1 sm:flex-initial">
+              <Button variant="fitness" onClick={joinGym} size="sm" className="flex-1 sm:flex-initial">
                 <UserPlus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Join Gym</span>
               </Button>
@@ -244,7 +103,7 @@ const GymDetails = () => {
                   <Users className="w-4 h-4 mr-1" />
                   Member
                 </Badge>
-                <Button variant="outline" size="sm" onClick={handleLeaveGym} className="flex-1 sm:flex-initial">
+                <Button variant="outline" size="sm" onClick={leaveGym} className="flex-1 sm:flex-initial">
                   Leave
                 </Button>
               </>
@@ -514,7 +373,7 @@ const GymDetails = () => {
                     <p className="text-muted-foreground mb-4">
                       Join {gymData.name} to connect with other members and find your workout buddies!
                     </p>
-                    <Button variant="fitness" onClick={handleJoinGym}>
+                    <Button variant="fitness" onClick={joinGym}>
                       <UserPlus className="w-4 h-4 mr-2" />
                       Join Gym
                     </Button>
@@ -535,7 +394,7 @@ const GymDetails = () => {
                   <p className="text-muted-foreground mb-4">
                     See who's leading in bench press, squat, and deadlift competitions!
                   </p>
-                  <Button variant="fitness" onClick={handleJoinGym}>
+                  <Button variant="fitness" onClick={joinGym}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Join Gym
                   </Button>

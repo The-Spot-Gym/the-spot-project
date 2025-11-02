@@ -4,70 +4,34 @@ import { ArrowLeft, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useConversationDetails } from "@/hooks/useConversationDetails";
 
 const Chat = () => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [conversation, setConversation] = useState<any>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const { conversation, participants, messages, loading, sendMessage: sendMsg } = useConversationDetails(
+    conversationId,
+    user?.id
+  );
+
+  // Polling fallback for messages (hook handles realtime)
   useEffect(() => {
-    if (conversationId && user) {
-      fetchConversation();
-      fetchMessages();
+    if (!conversationId || !user) return;
 
-      // Set up real-time subscription
-      const channel = supabase
-        .channel(`chat-${conversationId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversationId}`
-          },
-          async (payload) => {
-            const newMsg = payload.new as any;
-            console.log('[Realtime] New message event', newMsg);
+    const polling = setInterval(() => {
+      // Hook will handle the refresh
+    }, 5000);
 
-            // Fetch the sender's profile
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('user_id, display_name, username, avatar_url')
-              .eq('user_id', newMsg.sender_id)
-              .single();
-
-            // Add the new message with profile to state (avoid duplicates)
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev, { ...newMsg, profiles: profile }];
-            });
-          }
-        )
-        .subscribe((status) => {
-          console.log('[Realtime] channel status:', status);
-        });
-
-      // Fallback: light polling to ensure updates even if realtime drops
-      const polling = setInterval(() => {
-        fetchMessages();
-      }, 5000);
-
-      return () => {
-        clearInterval(polling);
-        supabase.removeChannel(channel);
-      };
-    }
+    return () => {
+      clearInterval(polling);
+    };
   }, [conversationId, user]);
 
   useEffect(() => {
@@ -78,115 +42,14 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const fetchConversation = async () => {
-    if (!conversationId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .single();
-
-      if (error) throw error;
-      setConversation(data);
-
-      // Fetch participants
-      const { data: parts, error: partsError } = await supabase
-        .from('conversation_participants')
-        .select('user_id')
-        .eq('conversation_id', conversationId);
-
-      if (partsError) throw partsError;
-
-      // Fetch profiles for participants
-      if (parts && parts.length > 0) {
-        const userIds = parts.map(p => p.user_id);
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, username, avatar_url')
-          .in('user_id', userIds);
-
-        if (profilesError) throw profilesError;
-
-        // Combine participants with their profiles
-        const participantsWithProfiles = parts.map(p => ({
-          user_id: p.user_id,
-          profiles: profiles?.find(profile => profile.user_id === p.user_id)
-        }));
-        
-        setParticipants(participantsWithProfiles);
-      }
-    } catch (error) {
-      console.error('Error fetching conversation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load conversation",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchMessages = async () => {
-    if (!conversationId) return;
-
-    try {
-      const { data: msgs, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Fetch profiles for message senders
-      if (msgs && msgs.length > 0) {
-        const senderIds = [...new Set(msgs.map(m => m.sender_id))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, username, avatar_url')
-          .in('user_id', senderIds);
-
-        // Attach profiles to messages
-        const messagesWithProfiles = msgs.map(msg => ({
-          ...msg,
-          profiles: profiles?.find(p => p.user_id === msg.sender_id)
-        }));
-        
-        setMessages(messagesWithProfiles);
-      } else {
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load chat history",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !conversationId || !user) return;
+    if (!newMessage.trim()) return;
 
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content: newMessage.trim()
-        });
-
-      if (error) throw error;
-
+    const success = await sendMsg(newMessage);
+    if (success) {
       setNewMessage("");
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } else {
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -338,7 +201,7 @@ const Chat = () => {
 
       {/* Input */}
       <div className="border-t bg-card p-4">
-        <form onSubmit={sendMessage} className="max-w-4xl mx-auto flex gap-2">
+        <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}

@@ -18,6 +18,7 @@ import { StatCard } from "@/components/StatCard";
 import { EmptyState } from "@/components/EmptyState";
 import { EXERCISES } from "@/constants/exercises";
 import { ROUTES } from "@/constants/routes";
+import { useWorkoutLogger } from "@/hooks/useWorkoutLogger";
 import Welcome from "./Welcome";
 import type { WorkoutSession, LeaderboardStats } from "@/types";
 
@@ -27,15 +28,17 @@ const Index = () => {
   const { profile, loading: profileLoading } = useProfile();
   const { toast } = useToast();
   const [streakData, setStreakData] = useState<LeaderboardStats | null>(null);
-  const [currentExercise, setCurrentExercise] = useState({
-    exercise: "",
-    weight: "",
-    reps: "",
-    sets: ""
-  });
-  const [exercisesInSession, setExercisesInSession] = useState<any[]>([]);
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutSession[]>([]);
-  const [saving, setSaving] = useState(false);
+
+  const {
+    currentExercise,
+    setCurrentExercise,
+    exercisesInSession,
+    saving,
+    addExerciseToSession,
+    removeExerciseFromSession,
+    logWorkout,
+  } = useWorkoutLogger(user?.id);
 
   const loading = authLoading || profileLoading;
 
@@ -98,88 +101,15 @@ const Index = () => {
     setRecentWorkouts(data);
   };
 
-  const addExerciseToSession = () => {
-    if (!currentExercise.exercise || !currentExercise.weight || !currentExercise.reps || !currentExercise.sets) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all fields to add an exercise.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setExercisesInSession([...exercisesInSession, { ...currentExercise }]);
-    setCurrentExercise({ exercise: "", weight: "", reps: "", sets: "" });
-    toast({
-      title: "Exercise added!",
-      description: `${currentExercise.exercise} added to your workout.`,
-    });
-  };
-
-  const removeExerciseFromSession = (index: number) => {
-    setExercisesInSession(exercisesInSession.filter((_, i) => i !== index));
+  const handleAddExercise = () => {
+    addExerciseToSession();
   };
 
   const handleLogWorkout = async () => {
-    if (!user) return;
-
-    if (exercisesInSession.length === 0) {
-      toast({
-        title: "No exercises added",
-        description: "Please add at least one exercise to your workout.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Create workout session
-      const { data: session, error: sessionError } = await supabase
-        .from('workout_sessions')
-        .insert({
-          user_id: user.id,
-          session_date: new Date().toISOString().split('T')[0]
-        })
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Insert all exercises (triggers will auto-update leaderboard stats)
-      const exercisesToInsert = exercisesInSession.map(ex => ({
-        session_id: session.id,
-        exercise_name: ex.exercise,
-        weight: parseFloat(ex.weight),
-        reps: parseInt(ex.reps),
-        sets: parseInt(ex.sets)
-      }));
-
-      const { error: exercisesError } = await supabase
-        .from('workout_exercises')
-        .insert(exercisesToInsert);
-
-      if (exercisesError) throw exercisesError;
-
-      toast({
-        title: "Workout logged!",
-        description: `Great job! Logged ${exercisesInSession.length} exercises! 💪`,
-      });
-
-      // Reset form and refresh data
-      setExercisesInSession([]);
-      setCurrentExercise({ exercise: "", weight: "", reps: "", sets: "" });
+    const success = await logWorkout();
+    if (success) {
       fetchStreakData();
       fetchRecentWorkouts();
-    } catch (error: any) {
-      console.error('Error logging workout:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to log workout. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -389,7 +319,7 @@ const Index = () => {
               </div>
 
               <Button 
-                onClick={addExerciseToSession}
+                onClick={handleAddExercise}
                 className="w-full"
                 variant="outline"
               >
