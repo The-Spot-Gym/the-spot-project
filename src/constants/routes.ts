@@ -12,4 +12,5 @@ export const ROUTES = {
   CHAT: (conversationId: string) => `/chat/${conversationId}`,
   FRIEND_REQUESTS: '/friend-requests',
   FRIEND_RECOMMENDATIONS: '/friend-recommendations',
+  WORKOUT_PLANS: '/workout-plans',
 } as const;

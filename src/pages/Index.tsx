@@ -173,6 +173,11 @@ const Index = () => {
                       <MapPin className="mr-2 h-4 w-4" />
                       My Gyms
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.WORKOUT_PLANS)}>
+                      <Dumbbell className="mr-2 h-4 w-4" />
+                      Workout Plans
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate(ROUTES.MESSAGES)}>
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Messages
