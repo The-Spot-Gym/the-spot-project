@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Loader2, Search, SlidersHorizontal, ArrowLeft } from "lucide-react";
+import { Star, Loader2, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { calculateDistance, formatDistance } from "@/utils/distance";
+import { PageHeader } from "@/components/PageHeader";
+import { ROUTES } from "@/constants/routes";
 
 const GymsNearYou = () => {
   const navigate = useNavigate();
@@ -122,19 +124,7 @@ const GymsNearYou = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card shadow-sm p-4 sticky top-0 z-10 border-b">
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="font-bold text-xl">Gyms Near You</h1>
-        </div>
-      </header>
+      <PageHeader title="Gyms Near You" showBackButton onBack={() => navigate(ROUTES.HOME)} />
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-6">
