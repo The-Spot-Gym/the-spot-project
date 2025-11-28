@@ -22,6 +22,7 @@ const GymsNearYou = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(10);
 
   // Get user location
   useEffect(() => {
@@ -127,6 +128,10 @@ const GymsNearYou = () => {
     return sorted;
   }, [gyms, userLocation, searchQuery, sortBy]);
 
+  // Gyms to display (limited by displayLimit)
+  const displayedGyms = filteredAndSortedGyms.slice(0, displayLimit);
+  const hasMoreGyms = filteredAndSortedGyms.length > displayLimit;
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Gyms Near You" showBackButton onBack={() => navigate(ROUTES.HOME)} />
@@ -193,11 +198,11 @@ const GymsNearYou = () => {
         ) : (
           <>
             <div className="mb-4 text-sm text-muted-foreground">
-              Showing {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
+              Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
               {searchQuery && ` matching "${searchQuery}"`}
             </div>
             <div className="grid gap-6">
-              {filteredAndSortedGyms.map((gym) => (
+              {displayedGyms.map((gym) => (
                 <Card 
                   key={gym.id} 
                   className="hover:shadow-card transition-all duration-300 cursor-pointer"
@@ -249,8 +254,22 @@ const GymsNearYou = () => {
               ))}
             </div>
 
-            <div className="mt-8 text-center">
-              <Button variant="outline" size="lg" onClick={fetchNearbyGyms} disabled={loadingGyms}>
+            <div className="mt-8 flex justify-center gap-4">
+              {hasMoreGyms && (
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  onClick={() => setDisplayLimit(prev => prev + 10)}
+                >
+                  Show More Gyms
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={fetchNearbyGyms} 
+                disabled={loadingGyms}
+              >
                 {loadingGyms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Refresh Gyms
               </Button>
