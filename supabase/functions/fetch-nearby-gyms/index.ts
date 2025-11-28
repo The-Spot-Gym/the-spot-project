@@ -81,38 +81,63 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${allPlaces.size} unique gyms`);
 
-    // Prepare all gym data
-    const gymDataArray = Array.from(allPlaces.values()).map(place => ({
-      google_place_id: place.place_id,
-      name: place.name,
-      address: place.vicinity || place.formatted_address,
-      rating: place.rating || null,
-      latitude: place.geometry.location.lat,
-      longitude: place.geometry.location.lng,
-      user_ratings_total: place.user_ratings_total || null,
-      photo_url: place.photos?.[0]?.photo_reference
-        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
-        : null,
-    }));
+    // Prepare all gym data with validation
+    const gymDataArray = Array.from(allPlaces.values())
+      .filter(place => {
+        // Validate required fields
+        if (!place.place_id || !place.name || !place.geometry?.location?.lat || !place.geometry?.location?.lng) {
+          console.warn('Skipping invalid gym data:', place.name || 'unknown');
+          return false;
+        }
+        return true;
+      })
+      .map(place => ({
+        google_place_id: place.place_id,
+        name: place.name,
+        address: place.vicinity || place.formatted_address || null,
+        rating: place.rating || null,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        user_ratings_total: place.user_ratings_total || null,
+        photo_url: place.photos?.[0]?.photo_reference
+          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
+          : null,
+      }));
 
-    // Batch upsert all gyms at once for better performance
-    const { data: gyms, error: upsertError } = await supabase
-      .from('gyms')
-      .upsert(gymDataArray, { onConflict: 'google_place_id' })
-      .select();
+    console.log(`Validated ${gymDataArray.length} gyms for database insert`);
 
-    if (upsertError) {
-      console.error('Error upserting gyms:', upsertError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to save gyms to database' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Process in smaller batches to avoid timeouts and size limits
+    const BATCH_SIZE = 20;
+    const allGyms = [];
+    
+    for (let i = 0; i < gymDataArray.length; i += BATCH_SIZE) {
+      const batch = gymDataArray.slice(i, i + BATCH_SIZE);
+      
+      try {
+        const { data: batchGyms, error: batchError } = await supabase
+          .from('gyms')
+          .upsert(batch, { onConflict: 'google_place_id' })
+          .select();
+
+        if (batchError) {
+          console.error(`Error upserting batch ${i / BATCH_SIZE + 1}:`, batchError);
+          // Continue with other batches even if one fails
+          continue;
+        }
+
+        if (batchGyms) {
+          allGyms.push(...batchGyms);
+        }
+      } catch (error) {
+        console.error(`Exception in batch ${i / BATCH_SIZE + 1}:`, error);
+        // Continue with other batches
+      }
     }
 
-    console.log(`Successfully processed ${gyms?.length || 0} gyms`);
+    console.log(`Successfully processed ${allGyms.length} gyms out of ${gymDataArray.length} total`);
 
     return new Response(
-      JSON.stringify({ gyms }),
+      JSON.stringify({ gyms: allGyms }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

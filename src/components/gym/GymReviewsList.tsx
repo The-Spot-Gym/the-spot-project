@@ -46,7 +46,14 @@ export const GymReviewsList = ({ reviews }: GymReviewsListProps) => {
       )}
       
       <div className="grid gap-4">
-        {filteredReviews.length > 0 ? (
+        {reviews.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground mb-2 font-semibold">Reviews coming soon</p>
+            <p className="text-sm text-muted-foreground">
+              We're working on integrating gym reviews from Google Places
+            </p>
+          </Card>
+        ) : filteredReviews.length > 0 ? (
           filteredReviews.map((review, index) => (
             <Card key={index}>
               <CardContent className="p-6">
