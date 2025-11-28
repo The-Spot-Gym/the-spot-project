@@ -81,8 +81,27 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${allPlaces.size} unique gyms`);
 
-    // Prepare all gym data with validation
-    const gymDataArray = Array.from(allPlaces.values())
+    // Helper to estimate distance in kilometers between two coordinates
+    const toRadians = (deg: number) => (deg * Math.PI) / 180;
+    const calculateDistanceKm = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number,
+    ) => {
+      const R = 6371; // Earth radius in km
+      const dLat = toRadians(lat2 - lat1);
+      const dLon = toRadians(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    // Prepare all gym data with validation and distance calculation
+    const gymsWithDistance = Array.from(allPlaces.values())
       .filter(place => {
         // Validate required fields
         if (!place.place_id || !place.name || !place.geometry?.location?.lat || !place.geometry?.location?.lng) {
@@ -91,23 +110,41 @@ Deno.serve(async (req) => {
         }
         return true;
       })
-      .map(place => ({
-        google_place_id: place.place_id,
-        name: place.name,
-        address: place.vicinity || place.formatted_address || null,
-        rating: place.rating || null,
-        latitude: place.geometry.location.lat,
-        longitude: place.geometry.location.lng,
-        user_ratings_total: place.user_ratings_total || null,
-        photo_url: place.photos?.[0]?.photo_reference
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
-          : null,
-      }));
+      .map(place => {
+        const distanceKm = calculateDistanceKm(
+          latitude,
+          longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng,
+        );
 
-    console.log(`Validated ${gymDataArray.length} gyms for database insert`);
+        return {
+          google_place_id: place.place_id,
+          name: place.name,
+          address: place.vicinity || place.formatted_address || null,
+          rating: place.rating || null,
+          latitude: place.geometry.location.lat,
+          longitude: place.geometry.location.lng,
+          user_ratings_total: place.user_ratings_total || null,
+          photo_url: place.photos?.[0]?.photo_reference
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
+            : null,
+          _distanceKm: distanceKm,
+        };
+      });
+
+    // Sort by distance and limit to closest gyms to reduce database load
+    const MAX_GYMS = 30;
+    const limitedGymsWithDistance = gymsWithDistance
+      .sort((a, b) => a._distanceKm - b._distanceKm)
+      .slice(0, MAX_GYMS);
+
+    const gymDataArray = limitedGymsWithDistance.map(({ _distanceKm, ...gym }) => gym);
+
+    console.log(`Validated ${gymDataArray.length} gyms for database insert (limited to closest ${MAX_GYMS})`);
 
     // Process in smaller batches to avoid timeouts and size limits
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 10;
     const allGyms = [];
     
     for (let i = 0; i < gymDataArray.length; i += BATCH_SIZE) {
