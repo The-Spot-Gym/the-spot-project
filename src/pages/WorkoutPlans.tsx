@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LoadingState } from '@/components/LoadingState';
@@ -19,8 +20,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PageHeader } from '@/components/PageHeader';
+import { ROUTES } from '@/constants/routes';
 
 export default function WorkoutPlans() {
+  const navigate = useNavigate();
   const { handleError, handleSuccess } = useErrorHandler();
   const { data: plans, isLoading, error } = useWorkoutPlansQuery();
   const createMutation = useCreateWorkoutPlanMutation();
@@ -67,17 +71,17 @@ export default function WorkoutPlans() {
   if (error) return <ErrorState message="Failed to load workout plans" />;
 
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Workout Plans</h1>
-          <p className="text-muted-foreground mt-1">Create and manage your workout templates</p>
+    <div className="min-h-screen bg-background">
+      <PageHeader title="Workout Plans" showBackButton onBack={() => navigate(ROUTES.HOME)} />
+      
+      <div className="container max-w-4xl py-6 space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-muted-foreground">Create and manage your workout templates</p>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Plan
+          </Button>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Plan
-        </Button>
-      </div>
 
       {!plans || plans.length === 0 ? (
         <div className="text-center py-12">
@@ -191,6 +195,7 @@ export default function WorkoutPlans() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
