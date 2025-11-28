@@ -21,6 +21,7 @@ const GymsNearYou = () => {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Get user location
   useEffect(() => {
@@ -39,7 +40,7 @@ const GymsNearYou = () => {
         }
       );
     }
-  }, [user, handleError]);
+  }, [user]);
 
   // Fetch gyms when location is available
   useEffect(() => {
@@ -49,9 +50,10 @@ const GymsNearYou = () => {
   }, [userLocation]);
 
   const fetchNearbyGyms = async () => {
-    if (!userLocation) return;
+    if (!userLocation || loadingGyms) return;
 
     setLoadingGyms(true);
+    setErrorMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke('fetch-nearby-gyms', {
         body: {
@@ -64,8 +66,11 @@ const GymsNearYou = () => {
       if (error) throw error;
 
       setGyms(data.gyms || []);
+      setErrorMessage(null);
     } catch (error) {
-      handleError(error, "Failed to load nearby gyms. Please try again.");
+      const message = "Failed to load nearby gyms. Please try again.";
+      handleError(error, message);
+      setErrorMessage(message);
     } finally {
       setLoadingGyms(false);
     }
@@ -132,7 +137,7 @@ const GymsNearYou = () => {
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="mb-4 flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
@@ -156,6 +161,12 @@ const GymsNearYou = () => {
             </Select>
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        )}
 
         {loadingGyms ? (
           <div className="flex items-center justify-center py-12">
