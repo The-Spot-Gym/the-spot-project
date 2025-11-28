@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Call Google Places API - Text Search for better results
-    // Using text search with multiple queries to catch different types of fitness facilities
     const searchQueries = [
       'gym',
       'fitness center',
@@ -45,63 +44,72 @@ Deno.serve(async (req) => {
       'crossfit'
     ];
 
-    const allPlaces = new Map(); // Use Map to avoid duplicates by place_id
+    const allPlaces = new Map();
     
     console.log('Fetching gyms from Google Places API...');
 
-    // Search with text queries for more comprehensive results
-    for (const query of searchQueries) {
+    // Fetch all queries in parallel for better performance
+    const fetchPromises = searchQueries.map(async (query) => {
       const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
       
-      const response = await fetch(textSearchUrl);
-      const data = await response.json();
+      try {
+        const response = await fetch(textSearchUrl);
+        const data = await response.json();
 
-      if (data.status === 'OK' && data.results) {
-        for (const place of data.results) {
-          // Only add if we haven't seen this place before
-          if (!allPlaces.has(place.place_id)) {
-            allPlaces.set(place.place_id, place);
-          }
+        if (data.status === 'OK' && data.results) {
+          return data.results;
+        } else if (data.status !== 'ZERO_RESULTS') {
+          console.error('Google Places API error for', query, ':', data.status, data.error_message);
         }
-      } else if (data.status !== 'ZERO_RESULTS') {
-        console.error('Google Places API error:', data.status, data.error_message);
+        return [];
+      } catch (error) {
+        console.error('Error fetching for query', query, ':', error);
+        return [];
+      }
+    });
+
+    const results = await Promise.all(fetchPromises);
+    
+    // Combine all results and deduplicate
+    for (const placeList of results) {
+      for (const place of placeList) {
+        if (!allPlaces.has(place.place_id)) {
+          allPlaces.set(place.place_id, place);
+        }
       }
     }
 
     console.log(`Found ${allPlaces.size} unique gyms`);
 
-    const gyms = [];
+    // Prepare all gym data
+    const gymDataArray = Array.from(allPlaces.values()).map(place => ({
+      google_place_id: place.place_id,
+      name: place.name,
+      address: place.vicinity || place.formatted_address,
+      rating: place.rating || null,
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      user_ratings_total: place.user_ratings_total || null,
+      photo_url: place.photos?.[0]?.photo_reference
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
+        : null,
+    }));
 
-    // Process each gym result
-    for (const place of Array.from(allPlaces.values())) {
-      const gymData = {
-        google_place_id: place.place_id,
-        name: place.name,
-        address: place.vicinity || place.formatted_address,
-        rating: place.rating || null,
-        latitude: place.geometry.location.lat,
-        longitude: place.geometry.location.lng,
-        user_ratings_total: place.user_ratings_total || null,
-        photo_url: place.photos?.[0]?.photo_reference
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
-          : null,
-      };
+    // Batch upsert all gyms at once for better performance
+    const { data: gyms, error: upsertError } = await supabase
+      .from('gyms')
+      .upsert(gymDataArray, { onConflict: 'google_place_id' })
+      .select();
 
-      // Upsert gym data into database
-      const { data, error } = await supabase
-        .from('gyms')
-        .upsert(gymData, { onConflict: 'google_place_id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error upserting gym:', error);
-      } else {
-        gyms.push(data);
-      }
+    if (upsertError) {
+      console.error('Error upserting gyms:', upsertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to save gyms to database' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`Successfully processed ${gyms.length} gyms`);
+    console.log(`Successfully processed ${gyms?.length || 0} gyms`);
 
     return new Response(
       JSON.stringify({ gyms }),
