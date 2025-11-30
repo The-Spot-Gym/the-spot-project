@@ -128,7 +128,11 @@ export const useAuth = () => {
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
+      // Use custom URL scheme for native iOS/Android, otherwise web URL
+      const isNative = window.location.protocol === 'capacitor:';
+      const redirectUrl = isNative 
+        ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
+        : `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
