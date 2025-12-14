@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ROUTES } from "@/constants/routes";
@@ -24,6 +27,39 @@ import NotFound from "./pages/NotFound";
 
 const AppContent = () => {
   usePushNotifications();
+
+  // Handle OAuth deep link callback on native platforms
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleDeepLink = async (url: string) => {
+      console.log('Deep link received:', url);
+      
+      // Check if this is an auth callback
+      if (url.includes('auth/callback')) {
+        try {
+          // Extract the URL and let Supabase handle the session
+          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
+          if (error) {
+            console.error('OAuth callback error:', error);
+          } else {
+            console.log('OAuth session established:', data);
+          }
+        } catch (err) {
+          console.error('Deep link auth error:', err);
+        }
+      }
+    };
+
+    // Listen for app URL open events
+    CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => {
+      CapacitorApp.removeAllListeners();
+    };
+  }, []);
   
   return (
     <>
