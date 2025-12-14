@@ -129,7 +129,8 @@ export const useAuth = () => {
     try {
       setLoading(true);
       // Use custom URL scheme for native iOS/Android, otherwise web URL
-      const isNative = window.location.protocol === 'capacitor:';
+      const isNative = typeof (window as any).Capacitor !== 'undefined' && 
+                       (window as any).Capacitor.isNativePlatform?.();
       const redirectUrl = isNative 
         ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
         : `${window.location.origin}/`;
