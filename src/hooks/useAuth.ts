@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -129,11 +129,12 @@ export const useAuth = () => {
     try {
       setLoading(true);
       // Use custom URL scheme for native iOS/Android, otherwise web URL
-      const isNative = typeof (window as any).Capacitor !== 'undefined' && 
-                       (window as any).Capacitor.isNativePlatform?.();
+      const isNative = Capacitor?.isNativePlatform?.() ?? false;
       const redirectUrl = isNative 
         ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
         : `${window.location.origin}/`;
+      
+      console.log('OAuth sign-in redirectUrl', redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
