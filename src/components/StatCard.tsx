@@ -14,20 +14,20 @@ export const StatCard = ({ label, value, sublabel, icon: Icon, variant = "defaul
   
   return (
     <Card className={isPrimary ? "bg-gradient-primary text-white" : ""}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
+      <CardContent className="p-3 sm:p-6">
+        <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
           <div>
-            <p className={`text-sm ${isPrimary ? "opacity-90" : "text-muted-foreground"}`}>
+            <p className={`text-xs sm:text-sm ${isPrimary ? "opacity-90" : "text-muted-foreground"}`}>
               {label}
             </p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
+            <p className="text-xl sm:text-3xl font-bold mt-0.5 sm:mt-1">{value}</p>
             {sublabel && (
-              <p className={`text-xs mt-1 ${isPrimary ? "opacity-75" : "text-muted-foreground"}`}>
+              <p className={`text-[10px] sm:text-xs mt-0.5 sm:mt-1 ${isPrimary ? "opacity-75" : "text-muted-foreground"}`}>
                 {sublabel}
               </p>
             )}
           </div>
-          <Icon className={`w-12 h-12 ${isPrimary ? "opacity-80" : "text-muted-foreground"}`} />
+          <Icon className={`hidden sm:block w-12 h-12 ${isPrimary ? "opacity-80" : "text-muted-foreground"}`} />
         </div>
       </CardContent>
     </Card>

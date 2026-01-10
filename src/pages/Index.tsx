@@ -127,10 +127,10 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-safe">
       {/* Custom Header with Logo and Full Menu */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center justify-between px-6">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-safe">
+        <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-white" />
@@ -212,27 +212,27 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Workout Logger</h1>
-          <p className="text-muted-foreground">Track your progress and stay motivated</p>
+      <div className="max-w-6xl mx-auto p-4 pb-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-1">Workout Logger</h1>
+          <p className="text-sm text-muted-foreground">Track your progress and stay motivated</p>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-4 mb-8">
+        <div className="grid gap-3 mb-6">
           <Button 
             variant="fitness" 
-            size="lg" 
+            size="default" 
             className="w-full"
             onClick={() => navigate(ROUTES.GYMS_NEAR_YOU)}
           >
-            <MapPin className="w-5 h-5 mr-2" />
+            <MapPin className="w-4 h-4 mr-2" />
             Find Gyms Near You
           </Button>
         </div>
 
         {/* Streak Stats */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-3 gap-3 mb-6">
           <StatCard
             label="Current Streak"
             value={streakData?.current_streak || 0}
@@ -254,7 +254,7 @@ const Index = () => {
           />
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-2 gap-4">
           <WorkoutForm 
             currentExercise={currentExercise}
             exercisesInSession={exercisesInSession}
