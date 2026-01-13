@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
+import { SignInWithApple, SignInWithAppleOptions, SignInWithAppleResponse } from '@capacitor-community/apple-sign-in';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 export const useAuth = () => {
@@ -125,10 +126,66 @@ export const useAuth = () => {
     }
   };
 
-  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+  const signInWithAppleNative = async () => {
     try {
       setLoading(true);
-      // Use custom URL scheme for native iOS/Android, otherwise web URL
+      
+      const options: SignInWithAppleOptions = {
+        clientId: 'app.lovable.c139716001b54f8bac70ff059738767c',
+        redirectURI: '', // Not needed for native
+        scopes: 'email name',
+        state: '', 
+        nonce: crypto.randomUUID(),
+      };
+
+      const response: SignInWithAppleResponse = await SignInWithApple.authorize(options);
+      
+      if (!response.response?.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      // Use Supabase signInWithIdToken for native Apple Sign-In
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: response.response.identityToken,
+        nonce: options.nonce,
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Sign in failed",
+          description: error.message
+        });
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('Apple Sign in error:', error);
+      // User cancelled - don't show error toast
+      if (error?.code === 1001 || error?.message?.includes('cancelled')) {
+        return { error };
+      }
+      toast({
+        variant: "destructive",
+        title: "Sign in failed",
+        description: error?.message || "An unexpected error occurred"
+      });
+      return { error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    // Use native Apple Sign-In on iOS
+    if (provider === 'apple' && Capacitor.isNativePlatform()) {
+      return signInWithAppleNative();
+    }
+
+    try {
+      setLoading(true);
       const isNative = Capacitor?.isNativePlatform?.() ?? false;
       const redirectUrl = isNative 
         ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
