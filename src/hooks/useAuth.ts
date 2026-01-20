@@ -180,17 +180,30 @@ export const useAuth = () => {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
-    const isNative = Capacitor?.isNativePlatform?.() ?? false;
     const platform = Capacitor.getPlatform();
+    const isNativePlatform = Capacitor?.isNativePlatform?.() ?? false;
+    // In some iOS builds, isNativePlatform can incorrectly return false.
+    // Treat iOS/Android platforms as native to ensure we always use the deep-link redirect.
+    const isNative = platform === 'ios' || platform === 'android' || isNativePlatform;
+
+    const nativeRedirectUrl =
+      'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback';
 
     console.log('OAuth provider:', provider);
     console.log('Capacitor platform:', platform);
-    console.log('Is native platform:', isNative);
+    console.log('Capacitor.isNativePlatform():', isNativePlatform);
+    console.log('Computed isNative:', isNative);
+
+    if ((platform === 'ios' || platform === 'android') && !isNativePlatform) {
+      console.warn(
+        'Auth debug: platform looks native, but isNativePlatform() returned false. Using native redirect anyway.'
+      );
+    }
 
     // Apple should use the native plugin on iOS. If we're not in a native container,
     // fail fast instead of sending the user to Supabase's web OAuth page.
     if (provider === 'apple') {
-      if (isNative && platform === 'ios') {
+      if (platform === 'ios') {
         console.log('Using native Apple Sign-In');
         return signInWithAppleNative();
       }
@@ -198,7 +211,7 @@ export const useAuth = () => {
       toast({
         variant: 'destructive',
         title: 'Apple Sign-In unavailable',
-        description: 'Apple Sign-In works only inside the iOS app build (not in the web preview).',
+        description: 'Apple Sign-In is only supported in the iOS app build.',
       });
 
       return { error: new Error('Apple Sign-In requires iOS native build') };
@@ -207,9 +220,7 @@ export const useAuth = () => {
     try {
       setLoading(true);
 
-      const redirectUrl = isNative
-        ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
-        : `${window.location.origin}/`;
+      const redirectUrl = isNative ? nativeRedirectUrl : `${window.location.origin}/`;
 
       console.log('OAuth sign-in redirectUrl', redirectUrl);
 
