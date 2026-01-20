@@ -127,10 +127,12 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-safe pt-safe">
+    <div className="min-h-screen bg-background pb-safe">
+      {/* Safe area spacer for iOS notch/Dynamic Island */}
+      <div className="h-safe-top bg-background" />
       {/* Custom Header with Logo and Full Menu */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-14 items-center justify-between px-4 pt-safe">
+        <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-white" />

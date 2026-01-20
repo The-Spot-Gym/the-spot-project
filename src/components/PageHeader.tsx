@@ -41,8 +41,11 @@ export const PageHeader = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-6 pt-safe">
+    <>
+      {/* Safe area spacer for iOS notch/Dynamic Island */}
+      <div className="h-safe-top bg-background sticky top-0 z-50" />
+      <header className="sticky top-[env(safe-area-inset-top,0px)] z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           {showBackButton && (
             <Button
@@ -95,6 +98,7 @@ export const PageHeader = ({
           )}
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 };
