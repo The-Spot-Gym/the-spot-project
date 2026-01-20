@@ -6,6 +6,7 @@ import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -44,6 +45,13 @@ const AppContent = () => {
             console.error('OAuth callback error:', error);
           } else {
             console.log('OAuth session established:', data);
+          }
+
+          // Close the in-app browser (Google OAuth, etc.) after we return to the app
+          try {
+            await Browser.close();
+          } catch {
+            // no-op
           }
         } catch (err) {
           console.error('Deep link auth error:', err);
