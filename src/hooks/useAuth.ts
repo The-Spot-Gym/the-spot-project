@@ -182,9 +182,13 @@ export const useAuth = () => {
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
     const platform = Capacitor.getPlatform();
     const isNativePlatform = Capacitor?.isNativePlatform?.() ?? false;
-    // In some iOS builds, isNativePlatform can incorrectly return false.
-    // Treat iOS/Android platforms as native to ensure we always use the deep-link redirect.
-    const isNative = platform === 'ios' || platform === 'android' || isNativePlatform;
+    const isCapacitorScheme =
+      typeof window !== 'undefined' && window.location?.protocol === 'capacitor:';
+
+    // In some builds, isNativePlatform can incorrectly return false.
+    // Also, Capacitor apps commonly run on the capacitor:// scheme.
+    const isNative =
+      platform === 'ios' || platform === 'android' || isNativePlatform || isCapacitorScheme;
 
     const nativeRedirectUrl =
       'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback';
@@ -192,18 +196,21 @@ export const useAuth = () => {
     console.log('OAuth provider:', provider);
     console.log('Capacitor platform:', platform);
     console.log('Capacitor.isNativePlatform():', isNativePlatform);
+    console.log('Window origin:', typeof window !== 'undefined' ? window.location.origin : 'n/a');
+    console.log('Window protocol:', typeof window !== 'undefined' ? window.location.protocol : 'n/a');
     console.log('Computed isNative:', isNative);
 
-    if ((platform === 'ios' || platform === 'android') && !isNativePlatform) {
+    if (isCapacitorScheme && !isNativePlatform) {
       console.warn(
-        'Auth debug: platform looks native, but isNativePlatform() returned false. Using native redirect anyway.'
+        'Auth debug: running on capacitor:// but isNativePlatform() returned false. Using native redirect anyway.'
       );
     }
 
     // Apple should use the native plugin on iOS. If we're not in a native container,
     // fail fast instead of sending the user to Supabase's web OAuth page.
     if (provider === 'apple') {
-      if (platform === 'ios') {
+      // On iOS, always use the native plugin. Some builds may misreport platform/native state.
+      if (platform === 'ios' || isCapacitorScheme) {
         console.log('Using native Apple Sign-In');
         return signInWithAppleNative();
       }

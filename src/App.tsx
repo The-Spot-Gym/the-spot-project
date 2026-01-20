@@ -31,7 +31,14 @@ const AppContent = () => {
 
   // Handle OAuth deep link callback on native platforms
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    const platform = Capacitor.getPlatform();
+    const isNativePlatform = Capacitor.isNativePlatform();
+    const isCapacitorScheme =
+      typeof window !== 'undefined' && window.location?.protocol === 'capacitor:';
+
+    if (!(platform === 'ios' || platform === 'android' || isNativePlatform || isCapacitorScheme)) {
+      return;
+    }
 
     const handleDeepLink = async (url: string) => {
       console.log('Deep link received:', url);
