@@ -39,8 +39,9 @@ const Welcome = () => {
               <p className="text-2xl opacity-90 mb-8 drop-shadow-md">Your fitness journey starts here</p>
               <Button 
                 size="lg"
+                variant="outline"
                 onClick={() => navigate('/auth')}
-                className="bg-white text-foreground hover:bg-white/90 text-lg px-8 py-6 rounded-2xl shadow-xl font-semibold"
+                className="bg-white !text-gray-900 hover:bg-white/90 text-lg px-8 py-6 rounded-2xl shadow-xl font-semibold border-0"
               >
                 Get Started
                 <ArrowRight className="ml-2 w-5 h-5" />
