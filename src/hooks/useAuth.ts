@@ -179,8 +179,16 @@ export const useAuth = () => {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    const platform = Capacitor.getPlatform();
+    const isNativePlatform = Capacitor.isNativePlatform();
+    
+    console.log('OAuth provider:', provider);
+    console.log('Capacitor platform:', platform);
+    console.log('Is native platform:', isNativePlatform);
+    
     // Use native Apple Sign-In on iOS
-    if (provider === 'apple' && Capacitor.isNativePlatform()) {
+    if (provider === 'apple' && platform === 'ios') {
+      console.log('Using native Apple Sign-In');
       return signInWithAppleNative();
     }
 
