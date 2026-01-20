@@ -13,8 +13,8 @@ const Welcome = () => {
       <header className="p-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-glow">
-              <Dumbbell className="w-7 h-7 text-primary" />
+            <div className="w-12 h-12 bg-gradient-secondary rounded-2xl flex items-center justify-center shadow-glow">
+              <Dumbbell className="w-7 h-7 text-white" />
             </div>
             <div className="text-white">
               <h2 className="text-2xl font-bold">The Spot</h2>
@@ -40,7 +40,7 @@ const Welcome = () => {
               <Button 
                 size="lg"
                 onClick={() => navigate('/auth')}
-                className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6 rounded-2xl shadow-xl"
+                className="bg-white text-foreground hover:bg-white/90 text-lg px-8 py-6 rounded-2xl shadow-xl font-semibold"
               >
                 Get Started
                 <ArrowRight className="ml-2 w-5 h-5" />
