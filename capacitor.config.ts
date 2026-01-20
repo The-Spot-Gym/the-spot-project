@@ -4,10 +4,8 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.c139716001b54f8bac70ff059738767c',
   appName: 'the-spot-project',
   webDir: 'dist',
-  server: {
-    url: 'https://c1397160-01b5-4f8b-ac70-ff059738767c.lovableproject.com?forceHideBadge=true',
-    cleartext: true
-  },
+  // Note: Remove server.url for production builds to use bundled app
+  // The server.url was causing Capacitor to detect platform as 'web' instead of 'ios'
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
