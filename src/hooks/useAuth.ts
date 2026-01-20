@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { SignInWithApple, SignInWithAppleOptions, SignInWithAppleResponse } from '@capacitor-community/apple-sign-in';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -179,51 +180,80 @@ export const useAuth = () => {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    const isNative = Capacitor?.isNativePlatform?.() ?? false;
     const platform = Capacitor.getPlatform();
-    const isNativePlatform = Capacitor.isNativePlatform();
-    
+
     console.log('OAuth provider:', provider);
     console.log('Capacitor platform:', platform);
-    console.log('Is native platform:', isNativePlatform);
-    
-    // Use native Apple Sign-In on iOS
-    if (provider === 'apple' && platform === 'ios') {
-      console.log('Using native Apple Sign-In');
-      return signInWithAppleNative();
+    console.log('Is native platform:', isNative);
+
+    // Apple should use the native plugin on iOS. If we're not in a native container,
+    // fail fast instead of sending the user to Supabase's web OAuth page.
+    if (provider === 'apple') {
+      if (isNative && platform === 'ios') {
+        console.log('Using native Apple Sign-In');
+        return signInWithAppleNative();
+      }
+
+      toast({
+        variant: 'destructive',
+        title: 'Apple Sign-In unavailable',
+        description: 'Apple Sign-In works only inside the iOS app build (not in the web preview).',
+      });
+
+      return { error: new Error('Apple Sign-In requires iOS native build') };
     }
 
     try {
       setLoading(true);
-      const isNative = Capacitor?.isNativePlatform?.() ?? false;
-      const redirectUrl = isNative 
+
+      const redirectUrl = isNative
         ? 'app.lovable.c139716001b54f8bac70ff059738767c://auth/callback'
         : `${window.location.origin}/`;
-      
+
       console.log('OAuth sign-in redirectUrl', redirectUrl);
-      
-      const { error } = await supabase.auth.signInWithOAuth({
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: redirectUrl,
-        }
+          ...(isNative ? { skipBrowserRedirect: true } : {}),
+        },
       });
 
       if (error) {
         toast({
-          variant: "destructive",
-          title: "Sign in failed",
-          description: error.message
+          variant: 'destructive',
+          title: 'Sign in failed',
+          description: error.message,
         });
         return { error };
+      }
+
+      // On native, open the provider auth URL in the system browser so the deep link callback
+      // (appUrlOpen -> exchangeCodeForSession) can bring the user back into the app.
+      if (isNative) {
+        const authUrl = (data as any)?.url as string | undefined;
+        if (!authUrl) {
+          const e = new Error('No OAuth URL returned from Supabase');
+          toast({
+            variant: 'destructive',
+            title: 'Sign in failed',
+            description: e.message,
+          });
+          return { error: e };
+        }
+
+        await Browser.open({ url: authUrl });
       }
 
       return { error: null };
     } catch (error) {
       console.error('OAuth sign in error:', error);
       toast({
-        variant: "destructive",
-        title: "Sign in failed",
-        description: "An unexpected error occurred"
+        variant: 'destructive',
+        title: 'Sign in failed',
+        description: 'An unexpected error occurred',
       });
       return { error };
     } finally {
