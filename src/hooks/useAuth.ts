@@ -233,18 +233,37 @@ export const useAuth = () => {
       // On native, open the provider auth URL in the system browser so the deep link callback
       // (appUrlOpen -> exchangeCodeForSession) can bring the user back into the app.
       if (isNative) {
-        const authUrl = (data as any)?.url as string | undefined;
-        if (!authUrl) {
+        // NOTE: When using skipBrowserRedirect, Supabase returns an /authorize URL with
+        // skip_http_redirect=true, which would otherwise download an "authorize.json" in Safari.
+        // We must fetch that URL to get the real provider redirect URL.
+        const authorizeUrl = (data as any)?.url as string | undefined;
+        if (!authorizeUrl) {
           const e = new Error('No OAuth URL returned from Supabase');
-          toast({
-            variant: 'destructive',
-            title: 'Sign in failed',
-            description: e.message,
-          });
+          toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
           return { error: e };
         }
 
-        await Browser.open({ url: authUrl });
+        const res = await fetch(authorizeUrl, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!res.ok) {
+          const e = new Error(`OAuth authorize request failed (${res.status})`);
+          toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
+          return { error: e };
+        }
+
+        const json = (await res.json()) as any;
+        const providerUrl: string | undefined = json?.url;
+
+        if (!providerUrl) {
+          const e = new Error('OAuth authorize response missing provider URL');
+          toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
+          return { error: e };
+        }
+
+        await Browser.open({ url: providerUrl });
       }
 
       return { error: null };
