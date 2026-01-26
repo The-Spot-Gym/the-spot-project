@@ -127,6 +127,13 @@ export const useAuth = () => {
     }
   };
 
+  // Generate a random string for nonce (no special characters)
+  const generateNonce = (): string => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  };
+
   // Helper to hash nonce with SHA-256 for Apple Sign-In
   const sha256 = async (plain: string): Promise<string> => {
     const encoder = new TextEncoder();
@@ -141,9 +148,14 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      // Generate raw nonce and its SHA-256 hash
-      const rawNonce = crypto.randomUUID();
+      // Generate raw nonce (64 char hex string) and its SHA-256 hash
+      const rawNonce = generateNonce();
       const hashedNonce = await sha256(rawNonce);
+      
+      console.log('Apple Sign-In nonce generated:', { 
+        rawNonceLength: rawNonce.length,
+        hashedNonceLength: hashedNonce.length 
+      });
       
       const options: SignInWithAppleOptions = {
         clientId: 'app.lovable.c139716001b54f8bac70ff059738767c',
@@ -159,12 +171,21 @@ export const useAuth = () => {
         throw new Error('No identity token received from Apple');
       }
 
+      console.log('Apple identity token received, exchanging with Supabase...');
+      console.log('Using raw nonce for Supabase:', rawNonce.substring(0, 10) + '...');
+
       // Use Supabase signInWithIdToken for native Apple Sign-In
       // Supabase gets the RAW nonce to verify against the hash in the token
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: response.response.identityToken,
         nonce: rawNonce, // Supabase gets the raw nonce
+      });
+
+      console.log('Supabase signInWithIdToken result:', { 
+        hasData: !!data, 
+        hasError: !!error,
+        errorMessage: error?.message 
       });
 
       if (error) {
