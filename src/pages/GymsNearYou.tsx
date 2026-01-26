@@ -303,38 +303,27 @@ const GymsNearYou = () => {
                   className="hover:shadow-card transition-all duration-300 cursor-pointer"
                   onClick={() => navigate(`/gym/${gym.id}`)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-center gap-3">
                       {gym.photo_url && (
                         <img 
                           src={gym.photo_url} 
                           alt={gym.name}
-                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                         />
                       )}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-base truncate">{gym.name}</h3>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <h3 className="font-semibold text-sm truncate">{gym.name}</h3>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                           {gym.rating && (
-                            <>
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-warning text-warning" />
-                                <span>{gym.rating}</span>
-                              </div>
-                              <span>•</span>
-                            </>
+                            <div className="flex items-center gap-0.5">
+                              <Star className="w-3 h-3 fill-warning text-warning flex-shrink-0" />
+                              <span>{gym.rating}</span>
+                            </div>
                           )}
-                          <span>{formatDistance(gym.distance)}</span>
-                          {gym.user_ratings_total && (
-                            <>
-                              <span>•</span>
-                              <span>{gym.user_ratings_total} reviews</span>
-                            </>
-                          )}
+                          <span className="text-muted-foreground/50">•</span>
+                          <span className="truncate">{formatDistance(gym.distance)}</span>
                         </div>
-                        {gym.address && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">{gym.address}</p>
-                        )}
                       </div>
                     </div>
                   </CardContent>
