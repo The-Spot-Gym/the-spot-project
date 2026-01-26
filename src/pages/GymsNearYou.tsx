@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { Star, Loader2, Search, SlidersHorizontal, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { calculateDistance, formatDistance } from "@/utils/distance";
 import { PageHeader } from "@/components/PageHeader";
 import { ROUTES } from "@/constants/routes";
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 const GymsNearYou = () => {
   const navigate = useNavigate();
@@ -23,35 +25,83 @@ const GymsNearYou = () => {
   const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [displayLimit, setDisplayLimit] = useState(10);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
-  // Get user location
-  useEffect(() => {
-    if (user && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
+  // Request location permission and get location
+  const requestLocation = async () => {
+    setLocationLoading(true);
+    setErrorMessage(null);
+    setPermissionDenied(false);
+    
+    try {
+      const isNative = Capacitor.isNativePlatform();
+      console.log('Requesting location, isNative:', isNative);
+      
+      if (isNative) {
+        // Use Capacitor Geolocation for native
+        const permissionStatus = await Geolocation.requestPermissions();
+        console.log('Permission status:', permissionStatus);
+        
+        if (permissionStatus.location === 'granted' || permissionStatus.coarseLocation === 'granted') {
+          const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+          console.log('Got position:', position.coords);
           setUserLocation({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          handleError(error, "Location access denied. Using default location. Please enable location access for better results.");
-          setUserLocation({ latitude: 40.7128, longitude: -74.0060 });
+        } else {
+          console.log('Location permission denied');
+          setPermissionDenied(true);
+          setErrorMessage("Location permission denied. Please enable it in your device settings.");
         }
-      );
+      } else {
+        // Use web geolocation API for browser
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setUserLocation({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              });
+            },
+            (error) => {
+              console.error('Web geolocation error:', error);
+              setPermissionDenied(true);
+              setErrorMessage("Location access denied. Please enable location in your browser.");
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        } else {
+          setErrorMessage("Geolocation is not supported by your browser.");
+        }
+      }
+    } catch (error: any) {
+      console.error('Location error:', error);
+      setErrorMessage(error.message || "Failed to get your location. Please try again.");
+    } finally {
+      setLocationLoading(false);
     }
-  }, [user]);
+  };
 
-  // Fetch gyms when location is available
+  // Fetch gyms when location becomes available
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && gyms.length === 0) {
       fetchNearbyGyms();
     }
   }, [userLocation]);
 
   const fetchNearbyGyms = async () => {
-    if (!userLocation || loadingGyms) return;
+    if (!userLocation) {
+      // If no location yet, request it first
+      await requestLocation();
+      return;
+    }
+    
+    if (loadingGyms) return;
 
     setLoadingGyms(true);
     setErrorMessage(null);
@@ -173,11 +223,53 @@ const GymsNearYou = () => {
           </div>
         )}
 
-        {loadingGyms ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+        {/* Initial state - no location yet */}
+        {!userLocation && !locationLoading && !loadingGyms && (
+          <Card className="p-8 text-center">
+            <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">Find Gyms Near You</h3>
+            <p className="text-muted-foreground mb-4">
+              Allow location access to discover fitness centers in your area
+            </p>
+            <Button onClick={requestLocation} variant="fitness" size="lg">
+              <MapPin className="w-4 h-4 mr-2" />
+              Enable Location
+            </Button>
+          </Card>
+        )}
+
+        {/* Loading location */}
+        {locationLoading && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+            <p className="text-muted-foreground">Getting your location...</p>
           </div>
-        ) : filteredAndSortedGyms.length === 0 ? (
+        )}
+
+        {/* Loading gyms */}
+        {loadingGyms && !locationLoading && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+            <p className="text-muted-foreground">Finding gyms near you...</p>
+          </div>
+        )}
+
+        {/* Permission denied state */}
+        {permissionDenied && !locationLoading && (
+          <Card className="p-8 text-center">
+            <MapPin className="w-12 h-12 mx-auto mb-4 text-destructive" />
+            <h3 className="text-lg font-semibold mb-2">Location Access Required</h3>
+            <p className="text-muted-foreground mb-4">
+              Please enable location access in your device settings to find nearby gyms.
+            </p>
+            <Button onClick={requestLocation} variant="fitness">
+              Try Again
+            </Button>
+          </Card>
+        )}
+
+        {/* No gyms found state */}
+        {userLocation && !loadingGyms && !locationLoading && filteredAndSortedGyms.length === 0 && (
           <Card className="p-8 text-center">
             {searchQuery ? (
               <>
@@ -188,14 +280,17 @@ const GymsNearYou = () => {
               </>
             ) : (
               <>
-                <p className="text-muted-foreground">No gyms found nearby. Try adjusting your location permissions.</p>
+                <p className="text-muted-foreground">No gyms found nearby.</p>
                 <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
                   Retry
                 </Button>
               </>
             )}
           </Card>
-        ) : (
+        )}
+
+        {/* Gyms list */}
+        {userLocation && !loadingGyms && !locationLoading && filteredAndSortedGyms.length > 0 && (
           <>
             <div className="mb-4 text-sm text-muted-foreground">
               Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
