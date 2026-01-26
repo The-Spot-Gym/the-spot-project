@@ -148,20 +148,16 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      // Generate raw nonce (64 char hex string)
-      // The Capacitor plugin may or may not hash internally - we'll try raw first
-      const rawNonce = generateNonce();
-      
-      console.log('Apple Sign-In nonce (raw):', rawNonce.substring(0, 16) + '...');
-      
+      // Note: We're not using a nonce for now as it causes verification issues
+      // with the Capacitor plugin + Supabase combination
       const options: SignInWithAppleOptions = {
         clientId: 'app.lovable.c139716001b54f8bac70ff059738767c',
         redirectURI: '', // Not needed for native
         scopes: 'email name',
-        state: '', 
-        nonce: rawNonce, // Try passing raw nonce - plugin may hash internally
+        state: '',
       };
 
+      console.log('Starting Apple Sign-In (no nonce)...');
       const response: SignInWithAppleResponse = await SignInWithApple.authorize(options);
       
       if (!response.response?.identityToken) {
@@ -169,14 +165,11 @@ export const useAuth = () => {
       }
 
       console.log('Apple identity token received, exchanging with Supabase...');
-      console.log('Using raw nonce for Supabase:', rawNonce.substring(0, 10) + '...');
 
-      // Use Supabase signInWithIdToken for native Apple Sign-In
-      // Supabase gets the RAW nonce to verify against the hash in the token
+      // Use Supabase signInWithIdToken for native Apple Sign-In (no nonce)
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: response.response.identityToken,
-        nonce: rawNonce, // Supabase gets the raw nonce
       });
 
       console.log('Supabase signInWithIdToken result:', { 
