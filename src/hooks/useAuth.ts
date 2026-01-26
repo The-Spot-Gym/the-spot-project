@@ -255,6 +255,7 @@ export const useAuth = () => {
       });
 
       if (error) {
+        console.error('Supabase signInWithOAuth error:', error.message, error);
         toast({
           variant: 'destructive',
           title: 'Sign in failed',
@@ -270,42 +271,63 @@ export const useAuth = () => {
         // skip_http_redirect=true, which would otherwise download an "authorize.json" in Safari.
         // We must fetch that URL to get the real provider redirect URL.
         const authorizeUrl = (data as any)?.url as string | undefined;
+        console.log('Authorize URL from Supabase:', authorizeUrl);
+        
         if (!authorizeUrl) {
           const e = new Error('No OAuth URL returned from Supabase');
+          console.error(e.message);
           toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
           return { error: e };
         }
 
-        const res = await fetch(authorizeUrl, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-        });
+        try {
+          console.log('Fetching authorize URL...');
+          const res = await fetch(authorizeUrl, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+          });
 
-        if (!res.ok) {
-          const e = new Error(`OAuth authorize request failed (${res.status})`);
-          toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
-          return { error: e };
+          console.log('Authorize fetch response status:', res.status);
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('Authorize fetch failed:', res.status, errorText);
+            const e = new Error(`OAuth authorize request failed (${res.status}): ${errorText}`);
+            toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
+            return { error: e };
+          }
+
+          const json = (await res.json()) as any;
+          console.log('Authorize JSON response:', JSON.stringify(json));
+          const providerUrl: string | undefined = json?.url;
+
+          if (!providerUrl) {
+            console.error('No provider URL in response:', json);
+            const e = new Error('OAuth authorize response missing provider URL');
+            toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
+            return { error: e };
+          }
+
+          console.log('Opening browser with provider URL:', providerUrl);
+          await Browser.open({ url: providerUrl });
+        } catch (fetchError: any) {
+          console.error('Fetch/Browser error:', fetchError?.message, fetchError);
+          toast({
+            variant: 'destructive',
+            title: 'Sign in failed',
+            description: fetchError?.message || 'Failed to open authentication page',
+          });
+          return { error: fetchError };
         }
-
-        const json = (await res.json()) as any;
-        const providerUrl: string | undefined = json?.url;
-
-        if (!providerUrl) {
-          const e = new Error('OAuth authorize response missing provider URL');
-          toast({ variant: 'destructive', title: 'Sign in failed', description: e.message });
-          return { error: e };
-        }
-
-        await Browser.open({ url: providerUrl });
       }
 
       return { error: null };
-    } catch (error) {
-      console.error('OAuth sign in error:', error);
+    } catch (error: any) {
+      console.error('OAuth sign in error:', error?.message, error?.stack, JSON.stringify(error));
       toast({
         variant: 'destructive',
         title: 'Sign in failed',
-        description: 'An unexpected error occurred',
+        description: error?.message || 'An unexpected error occurred',
       });
       return { error };
     } finally {
