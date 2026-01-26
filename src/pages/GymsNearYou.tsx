@@ -296,52 +296,45 @@ const GymsNearYou = () => {
               Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
               {searchQuery && ` matching "${searchQuery}"`}
             </div>
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               {displayedGyms.map((gym) => (
                 <Card 
                   key={gym.id} 
                   className="hover:shadow-card transition-all duration-300 cursor-pointer"
                   onClick={() => navigate(`/gym/${gym.id}`)}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
                       {gym.photo_url && (
                         <img 
                           src={gym.photo_url} 
                           alt={gym.name}
-                          className="w-16 h-16 rounded-lg object-cover"
+                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                         />
                       )}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-lg">{gym.name}</h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {gym.rating && (
-                                <>
-                                  <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 fill-warning text-warning" />
-                                    <span>{gym.rating}</span>
-                                  </div>
-                                   <span>•</span>
-                                </>
-                              )}
-                              <span>{formatDistance(gym.distance)} away</span>
-                              {gym.user_ratings_total && (
-                                <>
-                                  <span>•</span>
-                                  <span>{gym.user_ratings_total} reviews</span>
-                                </>
-                              )}
-                            </div>
-                            {gym.address && (
-                              <p className="text-xs text-muted-foreground mt-1">{gym.address}</p>
-                            )}
-                          </div>
-                          <Button variant="fitness">
-                            View Details
-                          </Button>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-base truncate">{gym.name}</h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          {gym.rating && (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-warning text-warning" />
+                                <span>{gym.rating}</span>
+                              </div>
+                              <span>•</span>
+                            </>
+                          )}
+                          <span>{formatDistance(gym.distance)}</span>
+                          {gym.user_ratings_total && (
+                            <>
+                              <span>•</span>
+                              <span>{gym.user_ratings_total} reviews</span>
+                            </>
+                          )}
                         </div>
+                        {gym.address && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">{gym.address}</p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
