@@ -148,21 +148,18 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      // Generate raw nonce (64 char hex string) and its SHA-256 hash
+      // Generate raw nonce (64 char hex string)
+      // The Capacitor plugin may or may not hash internally - we'll try raw first
       const rawNonce = generateNonce();
-      const hashedNonce = await sha256(rawNonce);
       
-      console.log('Apple Sign-In nonce generated:', { 
-        rawNonceLength: rawNonce.length,
-        hashedNonceLength: hashedNonce.length 
-      });
+      console.log('Apple Sign-In nonce (raw):', rawNonce.substring(0, 16) + '...');
       
       const options: SignInWithAppleOptions = {
         clientId: 'app.lovable.c139716001b54f8bac70ff059738767c',
         redirectURI: '', // Not needed for native
         scopes: 'email name',
         state: '', 
-        nonce: hashedNonce, // Apple gets the hashed nonce
+        nonce: rawNonce, // Try passing raw nonce - plugin may hash internally
       };
 
       const response: SignInWithAppleResponse = await SignInWithApple.authorize(options);
