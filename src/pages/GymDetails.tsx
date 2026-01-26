@@ -5,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Leaderboard from "@/components/Leaderboard";
 import { useGymDetails } from "@/hooks/useGymDetails";
 import { useGymMembers } from "@/hooks/useGymMembers";
-import { useGymReviews } from "@/hooks/useGymReviews";
 import { useGymMembership } from "@/hooks/useGymMembership";
 import { GymHeader } from "@/components/gym/GymHeader";
 import { GymInfo } from "@/components/gym/GymInfo";
@@ -19,8 +18,10 @@ const GymDetails = () => {
 
   const { gymData, loading: gymLoading, currentUser } = useGymDetails(gymId || null);
   const { members, loading: membersLoading } = useGymMembers(gymId || null);
-  const { reviews, loading: reviewsLoading } = useGymReviews(gymId || null);
   const { isMember, joinGym, leaveGym } = useGymMembership(gymId || null);
+
+  // Reviews come from gymData (fetched from Google Places API)
+  const reviews = gymData?.reviews || [];
 
   const handleSendFriendRequest = (memberName: string) => {
     console.log(`Sending friend request to ${memberName}`);
@@ -69,11 +70,7 @@ const GymDetails = () => {
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6">
-            {reviewsLoading ? (
-              <LoadingState message="Loading reviews..." />
-            ) : (
-              <GymReviewsList reviews={reviews} />
-            )}
+            <GymReviewsList reviews={reviews} />
           </TabsContent>
 
           <TabsContent value="members" className="mt-6">
