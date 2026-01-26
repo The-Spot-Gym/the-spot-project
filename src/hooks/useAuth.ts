@@ -127,16 +127,30 @@ export const useAuth = () => {
     }
   };
 
+  // Helper to hash nonce with SHA-256 for Apple Sign-In
+  const sha256 = async (plain: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  };
+
   const signInWithAppleNative = async () => {
     try {
       setLoading(true);
+      
+      // Generate raw nonce and its SHA-256 hash
+      const rawNonce = crypto.randomUUID();
+      const hashedNonce = await sha256(rawNonce);
       
       const options: SignInWithAppleOptions = {
         clientId: 'app.lovable.c139716001b54f8bac70ff059738767c',
         redirectURI: '', // Not needed for native
         scopes: 'email name',
         state: '', 
-        nonce: crypto.randomUUID(),
+        nonce: hashedNonce, // Apple gets the hashed nonce
       };
 
       const response: SignInWithAppleResponse = await SignInWithApple.authorize(options);
@@ -146,10 +160,11 @@ export const useAuth = () => {
       }
 
       // Use Supabase signInWithIdToken for native Apple Sign-In
+      // Supabase gets the RAW nonce to verify against the hash in the token
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: response.response.identityToken,
-        nonce: options.nonce,
+        nonce: rawNonce, // Supabase gets the raw nonce
       });
 
       if (error) {
