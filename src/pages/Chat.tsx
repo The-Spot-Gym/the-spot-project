@@ -110,6 +110,8 @@ const Chat = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Safe area spacer for iOS notch/Dynamic Island */}
+      <div className="h-safe-top bg-card" />
       {/* Header */}
       <header className="bg-card border-b p-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center gap-4">

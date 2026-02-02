@@ -14,6 +14,8 @@ import { ROUTES } from "@/constants/routes";
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 
+const LOCATION_PROMPTED_KEY = 'gyms_location_prompted';
+
 const GymsNearYou = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -27,6 +29,16 @@ const GymsNearYou = () => {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [locationLoading, setLocationLoading] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [hasPromptedBefore, setHasPromptedBefore] = useState(() => {
+    return localStorage.getItem(LOCATION_PROMPTED_KEY) === 'true';
+  });
+
+  // Auto-request location on mount if user has granted before
+  useEffect(() => {
+    if (hasPromptedBefore && !userLocation && !locationLoading) {
+      requestLocation();
+    }
+  }, []);
 
   // Request location permission and get location
   const requestLocation = async () => {
@@ -44,6 +56,8 @@ const GymsNearYou = () => {
         console.log('Permission status:', permissionStatus);
         
         if (permissionStatus.location === 'granted' || permissionStatus.coarseLocation === 'granted') {
+          localStorage.setItem(LOCATION_PROMPTED_KEY, 'true');
+          setHasPromptedBefore(true);
           const position = await Geolocation.getCurrentPosition({
             enableHighAccuracy: true,
             timeout: 10000,
@@ -63,6 +77,8 @@ const GymsNearYou = () => {
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
+              localStorage.setItem(LOCATION_PROMPTED_KEY, 'true');
+              setHasPromptedBefore(true);
               setUserLocation({
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
@@ -183,29 +199,29 @@ const GymsNearYou = () => {
   const hasMoreGyms = filteredAndSortedGyms.length > displayLimit;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <PageHeader title="Gyms Near You" showBackButton onBack={() => navigate(ROUTES.HOME)} />
 
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="mb-6">
           <p className="text-muted-foreground">Discover your perfect fitness community</p>
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="mb-4 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search gyms by name or location..."
+              placeholder="Search gyms..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 w-full">
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <Select value={sortBy} onValueChange={(value: "distance" | "rating" | "reviews") => setSortBy(value)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -223,8 +239,8 @@ const GymsNearYou = () => {
           </div>
         )}
 
-        {/* Initial state - no location yet */}
-        {!userLocation && !locationLoading && !loadingGyms && (
+        {/* Initial state - no location yet (only show if never prompted before) */}
+        {!userLocation && !locationLoading && !loadingGyms && !hasPromptedBefore && (
           <Card className="p-8 text-center">
             <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">Find Gyms Near You</h3>
@@ -296,33 +312,33 @@ const GymsNearYou = () => {
               Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
               {searchQuery && ` matching "${searchQuery}"`}
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-3 w-full">
               {displayedGyms.map((gym) => (
                 <Card 
                   key={gym.id} 
-                  className="hover:shadow-card transition-all duration-300 cursor-pointer"
+                  className="hover:shadow-card transition-all duration-300 cursor-pointer w-full"
                   onClick={() => navigate(`/gym/${gym.id}`)}
                 >
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full min-w-0">
                       {gym.photo_url && (
                         <img 
                           src={gym.photo_url} 
                           alt={gym.name}
-                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                         />
                       )}
-                      <div className="min-w-0 flex-1 overflow-hidden">
-                        <h3 className="font-semibold text-sm truncate">{gym.name}</h3>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate max-w-full">{gym.name}</h3>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                           {gym.rating && (
-                            <div className="flex items-center gap-0.5">
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               <Star className="w-3 h-3 fill-warning text-warning flex-shrink-0" />
                               <span>{gym.rating}</span>
                             </div>
                           )}
-                          <span className="text-muted-foreground/50">•</span>
-                          <span className="truncate">{formatDistance(gym.distance)}</span>
+                          <span className="text-muted-foreground/50 flex-shrink-0">•</span>
+                          <span className="flex-shrink-0">{formatDistance(gym.distance)}</span>
                         </div>
                       </div>
                     </div>
