@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -11,14 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { latitude, longitude, radius = 5000 } = await req.json();
-
-    if (!latitude || !longitude) {
-      return new Response(
-        JSON.stringify({ error: 'Latitude and longitude are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { latitude, longitude, radius = 5000, searchQuery } = await req.json();
 
     const googleApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!googleApiKey) {
@@ -34,47 +27,81 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Call Google Places API - Text Search for better results
-    const searchQueries = [
-      'gym',
-      'fitness center',
-      '24 hour fitness',
-      'YMCA',
-      'health club',
-      'crossfit'
-    ];
-
     const allPlaces = new Map();
     
-    console.log('Fetching gyms from Google Places API...');
-
-    // Fetch all queries in parallel for better performance
-    const fetchPromises = searchQueries.map(async (query) => {
-      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
+    // If searchQuery is provided, do a text-based search (no location required)
+    if (searchQuery && searchQuery.trim().length > 0) {
+      console.log('Searching for gym:', searchQuery);
+      
+      // Search for the specific gym by name
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery + ' gym')}&type=gym&key=${googleApiKey}`;
       
       try {
         const response = await fetch(textSearchUrl);
         const data = await response.json();
 
         if (data.status === 'OK' && data.results) {
-          return data.results;
+          for (const place of data.results) {
+            if (!allPlaces.has(place.place_id)) {
+              allPlaces.set(place.place_id, place);
+            }
+          }
+          console.log(`Found ${data.results.length} results for search query`);
         } else if (data.status !== 'ZERO_RESULTS') {
-          console.error('Google Places API error for', query, ':', data.status, data.error_message);
+          console.error('Google Places API error for search:', data.status, data.error_message);
         }
-        return [];
       } catch (error) {
-        console.error('Error fetching for query', query, ':', error);
-        return [];
+        console.error('Error searching:', error);
       }
-    });
+    } else {
+      // Location-based nearby search (original behavior)
+      if (!latitude || !longitude) {
+        return new Response(
+          JSON.stringify({ error: 'Latitude and longitude are required for nearby search' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    const results = await Promise.all(fetchPromises);
-    
-    // Combine all results and deduplicate
-    for (const placeList of results) {
-      for (const place of placeList) {
-        if (!allPlaces.has(place.place_id)) {
-          allPlaces.set(place.place_id, place);
+      // Call Google Places API - Text Search for better results
+      const searchQueries = [
+        'gym',
+        'fitness center',
+        '24 hour fitness',
+        'YMCA',
+        'health club',
+        'crossfit'
+      ];
+
+      console.log('Fetching nearby gyms from Google Places API...');
+
+      // Fetch all queries in parallel for better performance
+      const fetchPromises = searchQueries.map(async (query) => {
+        const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
+        
+        try {
+          const response = await fetch(textSearchUrl);
+          const data = await response.json();
+
+          if (data.status === 'OK' && data.results) {
+            return data.results;
+          } else if (data.status !== 'ZERO_RESULTS') {
+            console.error('Google Places API error for', query, ':', data.status, data.error_message);
+          }
+          return [];
+        } catch (error) {
+          console.error('Error fetching for query', query, ':', error);
+          return [];
+        }
+      });
+
+      const results = await Promise.all(fetchPromises);
+      
+      // Combine all results and deduplicate
+      for (const placeList of results) {
+        for (const place of placeList) {
+          if (!allPlaces.has(place.place_id)) {
+            allPlaces.set(place.place_id, place);
+          }
         }
       }
     }
@@ -111,12 +138,16 @@ Deno.serve(async (req) => {
         return true;
       })
       .map(place => {
-        const distanceKm = calculateDistanceKm(
-          latitude,
-          longitude,
-          place.geometry.location.lat,
-          place.geometry.location.lng,
-        );
+        // Calculate distance only if we have user location
+        let distanceKm = 0;
+        if (latitude && longitude) {
+          distanceKm = calculateDistanceKm(
+            latitude,
+            longitude,
+            place.geometry.location.lat,
+            place.geometry.location.lng,
+          );
+        }
 
         return {
           google_place_id: place.place_id,
@@ -133,15 +164,21 @@ Deno.serve(async (req) => {
         };
       });
 
-    // Sort by distance and limit to closest gyms to reduce database load
+    // Sort by distance (if available) or rating and limit to reduce database load
     const MAX_GYMS = 30;
     const limitedGymsWithDistance = gymsWithDistance
-      .sort((a, b) => a._distanceKm - b._distanceKm)
+      .sort((a, b) => {
+        if (latitude && longitude) {
+          return a._distanceKm - b._distanceKm;
+        }
+        // Sort by rating if no location
+        return (b.rating || 0) - (a.rating || 0);
+      })
       .slice(0, MAX_GYMS);
 
     const gymDataArray = limitedGymsWithDistance.map(({ _distanceKm, ...gym }) => gym);
 
-    console.log(`Validated ${gymDataArray.length} gyms for database insert (limited to closest ${MAX_GYMS})`);
+    console.log(`Validated ${gymDataArray.length} gyms for database insert`);
 
     // Process in smaller batches to avoid timeouts and size limits
     const BATCH_SIZE = 10;

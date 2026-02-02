@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, Loader2, Search, SlidersHorizontal, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,9 @@ const GymsNearYou = () => {
   const { user } = useAuth();
   const { handleError } = useErrorHandler();
   const [gyms, setGyms] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loadingGyms, setLoadingGyms] = useState(false);
+  const [searchingGyms, setSearchingGyms] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "rating" | "popularity">("popularity");
@@ -143,19 +145,81 @@ const GymsNearYou = () => {
     }
   };
 
+  // Search for gyms remotely when query doesn't match local results
+  const searchGymsRemotely = useCallback(async (query: string) => {
+    if (query.trim().length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchingGyms(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-nearby-gyms', {
+        body: {
+          searchQuery: query,
+          latitude: userLocation?.latitude,
+          longitude: userLocation?.longitude,
+        },
+      });
+
+      if (error) throw error;
+
+      setSearchResults(data.gyms || []);
+    } catch (error) {
+      console.error('Error searching gyms:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchingGyms(false);
+    }
+  }, [userLocation]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim().length >= 3) {
+        // Check if local results exist
+        const localMatches = gyms.filter(gym =>
+          gym.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          gym.address?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        
+        // If no local matches, search remotely
+        if (localMatches.length === 0) {
+          searchGymsRemotely(searchQuery);
+        } else {
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, gyms, searchGymsRemotely]);
+
   // Filter and sort gyms
   const filteredAndSortedGyms = useMemo(() => {
-    if (!userLocation) return [];
+    // Combine local gyms and remote search results
+    const allGyms = [...gyms];
+    
+    // Add search results that aren't already in the list
+    for (const searchGym of searchResults) {
+      if (!allGyms.find(g => g.id === searchGym.id)) {
+        allGyms.push(searchGym);
+      }
+    }
 
-    // Add distance to each gym
-    const gymsWithDistance = gyms.map(gym => ({
+    // Add distance to each gym (if user location available)
+    const gymsWithDistance = allGyms.map(gym => ({
       ...gym,
-      distance: calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        gym.latitude,
-        gym.longitude
-      )
+      distance: userLocation 
+        ? calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            gym.latitude,
+            gym.longitude
+          )
+        : null
     }));
 
     // Filter by search query
@@ -177,7 +241,7 @@ const GymsNearYou = () => {
 
     // Sort
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === "distance") {
+      if (sortBy === "distance" && a.distance !== null && b.distance !== null) {
         return a.distance - b.distance;
       } else if (sortBy === "rating") {
         const ratingA = a.rating || 0;
@@ -192,7 +256,7 @@ const GymsNearYou = () => {
     });
 
     return sorted;
-  }, [gyms, userLocation, searchQuery, sortBy]);
+  }, [gyms, searchResults, userLocation, searchQuery, sortBy]);
 
   // Gyms to display (limited by displayLimit)
   const displayedGyms = filteredAndSortedGyms.slice(0, displayLimit);
@@ -212,11 +276,14 @@ const GymsNearYou = () => {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search gyms..."
+              placeholder="Search any gym..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 w-full"
             />
+            {searchingGyms && (
+              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+            )}
           </div>
           <div className="flex items-center gap-2 w-full">
             <SlidersHorizontal className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -285,32 +352,41 @@ const GymsNearYou = () => {
         )}
 
         {/* No gyms found state */}
-        {userLocation && !loadingGyms && !locationLoading && filteredAndSortedGyms.length === 0 && (
+        {!loadingGyms && !locationLoading && !searchingGyms && filteredAndSortedGyms.length === 0 && (
           <Card className="p-8 text-center">
             {searchQuery ? (
               <>
                 <p className="text-muted-foreground">No gyms found matching "{searchQuery}"</p>
+                <p className="text-xs text-muted-foreground mt-2">Try searching for a different gym name or location</p>
                 <Button onClick={() => setSearchQuery("")} className="mt-4" variant="outline">
                   Clear Search
                 </Button>
               </>
-            ) : (
+            ) : userLocation ? (
               <>
                 <p className="text-muted-foreground">No gyms found nearby.</p>
                 <Button onClick={fetchNearbyGyms} className="mt-4" variant="fitness">
                   Retry
                 </Button>
               </>
+            ) : (
+              <>
+                <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Search for a gym by name to get started</p>
+              </>
             )}
           </Card>
         )}
 
         {/* Gyms list */}
-        {userLocation && !loadingGyms && !locationLoading && filteredAndSortedGyms.length > 0 && (
+        {!loadingGyms && !locationLoading && filteredAndSortedGyms.length > 0 && (
           <>
-            <div className="mb-4 text-sm text-muted-foreground">
-              Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
-              {searchQuery && ` matching "${searchQuery}"`}
+            <div className="mb-4 text-sm text-muted-foreground flex items-center gap-2">
+              <span>
+                Showing {displayedGyms.length} of {filteredAndSortedGyms.length} {filteredAndSortedGyms.length === 1 ? 'gym' : 'gyms'}
+                {searchQuery && ` matching "${searchQuery}"`}
+              </span>
+              {searchingGyms && <Loader2 className="w-3 h-3 animate-spin" />}
             </div>
             <div className="grid gap-3 w-full">
               {displayedGyms.map((gym) => (
@@ -343,8 +419,12 @@ const GymsNearYou = () => {
                               <span className="flex-shrink-0">({gym.user_ratings_total})</span>
                             </>
                           )}
-                          <span className="text-muted-foreground/50 flex-shrink-0">•</span>
-                          <span className="flex-shrink-0">{formatDistance(gym.distance)}</span>
+                          {gym.distance !== null && (
+                            <>
+                              <span className="text-muted-foreground/50 flex-shrink-0">•</span>
+                              <span className="flex-shrink-0">{formatDistance(gym.distance)}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
