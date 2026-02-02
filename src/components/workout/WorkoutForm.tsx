@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,8 @@ interface WorkoutFormProps {
   onCompleteWorkout: () => void;
 }
 
+const CUSTOM_EXERCISE_VALUE = "__custom__";
+
 export const WorkoutForm = ({
   currentExercise,
   exercisesInSession,
@@ -26,6 +29,26 @@ export const WorkoutForm = ({
   onRemoveExercise,
   onCompleteWorkout,
 }: WorkoutFormProps) => {
+  const [isCustomExercise, setIsCustomExercise] = useState(false);
+  const [customExerciseName, setCustomExerciseName] = useState("");
+
+  const handleExerciseSelect = (value: string) => {
+    if (value === CUSTOM_EXERCISE_VALUE) {
+      setIsCustomExercise(true);
+      setCustomExerciseName("");
+      onExerciseChange({ ...currentExercise, exercise: "" });
+    } else {
+      setIsCustomExercise(false);
+      setCustomExerciseName("");
+      onExerciseChange({ ...currentExercise, exercise: value });
+    }
+  };
+
+  const handleCustomExerciseChange = (value: string) => {
+    setCustomExerciseName(value);
+    onExerciseChange({ ...currentExercise, exercise: value });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -35,19 +58,46 @@ export const WorkoutForm = ({
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="exercise">Exercise</Label>
-          <Select 
-            value={currentExercise.exercise} 
-            onValueChange={(value) => onExerciseChange({ ...currentExercise, exercise: value })}
-          >
-            <SelectTrigger id="exercise">
-              <SelectValue placeholder="Select exercise" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {EXERCISES.map(exercise => (
-                <SelectItem key={exercise} value={exercise}>{exercise}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isCustomExercise ? (
+            <div className="flex gap-2">
+              <Input
+                id="custom-exercise"
+                placeholder="Enter exercise name"
+                value={customExerciseName}
+                onChange={(e) => handleCustomExerciseChange(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsCustomExercise(false);
+                  setCustomExerciseName("");
+                  onExerciseChange({ ...currentExercise, exercise: "" });
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Select 
+              value={currentExercise.exercise} 
+              onValueChange={handleExerciseSelect}
+            >
+              <SelectTrigger id="exercise">
+                <SelectValue placeholder="Select exercise" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value={CUSTOM_EXERCISE_VALUE} className="font-medium text-primary">
+                  ✏️ Type custom exercise...
+                </SelectItem>
+                {EXERCISES.map(exercise => (
+                  <SelectItem key={exercise} value={exercise}>{exercise}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-4">
