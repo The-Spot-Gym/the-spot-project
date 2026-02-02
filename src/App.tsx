@@ -24,6 +24,7 @@ import Chat from "./pages/Chat";
 import FriendRequests from "./pages/FriendRequests";
 import FriendRecommendations from "./pages/FriendRecommendations";
 import WorkoutPlans from "./pages/WorkoutPlans";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const AppContent = () => {
@@ -94,6 +95,7 @@ const AppContent = () => {
         <Route path="/friend-requests" element={<FriendRequests />} />
         <Route path="/friend-recommendations" element={<FriendRecommendations />} />
         <Route path="/workout-plans" element={<WorkoutPlans />} />
+        <Route path="/privacy" element={<Privacy />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
