@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Users, MapPin, Loader2 } from "lucide-react";
+import { UserPlus, Users, MapPin, Loader2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,17 @@ import { useFriends } from "@/hooks/useFriends";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ROUTES } from "@/constants/routes";
-import type { FriendRecommendation } from "@/types/components";
+
+interface FriendRecommendation {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  shared_gyms_count: number;
+  common_gym_names: string[];
+  mutual_friends_count: number;
+  recommendation_source: 'gym' | 'mutual_friend' | 'nearby';
+}
 
 const FriendRecommendations = () => {
   const navigate = useNavigate();
@@ -30,13 +40,23 @@ const FriendRecommendations = () => {
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_gym_based_friend_recommendations', {
+      const { data, error } = await supabase.rpc('get_comprehensive_friend_recommendations', {
         current_user_id: user?.id,
         limit_count: 20
       });
 
-      if (error) throw error;
-      setRecommendations(data || []);
+      if (error) {
+        // Fall back to gym-based recommendations if comprehensive function fails
+        console.warn('Comprehensive recommendations failed, falling back to gym-based:', error);
+        const { data: gymData, error: gymError } = await supabase.rpc('get_gym_based_friend_recommendations', {
+          current_user_id: user?.id,
+          limit_count: 20
+        });
+        if (gymError) throw gymError;
+        setRecommendations((gymData || []).map((r: any) => ({ ...r, mutual_friends_count: 0, recommendation_source: 'gym' as const })));
+      } else {
+        setRecommendations((data || []).map((r: any) => ({ ...r, recommendation_source: r.recommendation_source as 'gym' | 'mutual_friend' | 'nearby' })));
+      }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     } finally {
@@ -71,19 +91,37 @@ const FriendRecommendations = () => {
     );
   }
 
+  const getSourceIcon = (source: string) => {
+    switch (source) {
+      case 'gym': return <MapPin className="w-4 h-4" />;
+      case 'mutual_friend': return <UsersRound className="w-4 h-4" />;
+      case 'nearby': return <MapPin className="w-4 h-4" />;
+      default: return <Users className="w-4 h-4" />;
+    }
+  };
+
+  const getSourceLabel = (source: string) => {
+    switch (source) {
+      case 'gym': return 'Shared gyms';
+      case 'mutual_friend': return 'Mutual friends';
+      case 'nearby': return 'Nearby';
+      default: return 'Suggested';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title="Friend Recommendations" showBackButton onBack={() => navigate(ROUTES.HOME)} />
+      <PageHeader title="Find Friends" showBackButton onBack={() => navigate(ROUTES.HOME)} />
 
       <main className="max-w-4xl mx-auto p-4">
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              People at Your Gyms
+              <Users className="w-5 h-5 text-primary" />
+              Suggested Friends
             </CardTitle>
             <CardDescription>
-              Connect with people who work out at the same gyms as you
+              Connect with people based on shared gyms, mutual friends, or nearby locations
             </CardDescription>
           </CardHeader>
         </Card>
@@ -128,9 +166,14 @@ const FriendRecommendations = () => {
                             </p>
                           )}
                           <div className="flex items-center gap-2 mt-2">
-                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            {getSourceIcon(recommendation.recommendation_source)}
                             <span className="text-sm text-muted-foreground">
-                              {recommendation.shared_gyms_count} shared {recommendation.shared_gyms_count === 1 ? 'gym' : 'gyms'}
+                              {recommendation.recommendation_source === 'gym' && recommendation.shared_gyms_count > 0 
+                                ? `${recommendation.shared_gyms_count} shared ${recommendation.shared_gyms_count === 1 ? 'gym' : 'gyms'}`
+                                : recommendation.recommendation_source === 'mutual_friend' && recommendation.mutual_friends_count > 0
+                                ? `${recommendation.mutual_friends_count} mutual ${recommendation.mutual_friends_count === 1 ? 'friend' : 'friends'}`
+                                : getSourceLabel(recommendation.recommendation_source)
+                              }
                             </span>
                           </div>
                         </div>

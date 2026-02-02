@@ -517,6 +517,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_comprehensive_friend_recommendations: {
+        Args: { current_user_id: string; limit_count?: number }
+        Returns: {
+          avatar_url: string
+          common_gym_names: string[]
+          display_name: string
+          mutual_friends_count: number
+          recommendation_source: string
+          shared_gyms_count: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_gym_based_friend_recommendations: {
         Args: { current_user_id: string; limit_count?: number }
         Returns: {
