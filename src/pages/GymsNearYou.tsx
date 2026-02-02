@@ -24,7 +24,7 @@ const GymsNearYou = () => {
   const [loadingGyms, setLoadingGyms] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"distance" | "rating" | "reviews">("distance");
+  const [sortBy, setSortBy] = useState<"distance" | "rating" | "popularity">("popularity");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [displayLimit, setDisplayLimit] = useState(10);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -183,7 +183,7 @@ const GymsNearYou = () => {
         const ratingA = a.rating || 0;
         const ratingB = b.rating || 0;
         return ratingB - ratingA;
-      } else if (sortBy === "reviews") {
+      } else if (sortBy === "popularity") {
         const reviewsA = a.user_ratings_total || 0;
         const reviewsB = b.user_ratings_total || 0;
         return reviewsB - reviewsA;
@@ -220,14 +220,14 @@ const GymsNearYou = () => {
           </div>
           <div className="flex items-center gap-2 w-full">
             <SlidersHorizontal className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <Select value={sortBy} onValueChange={(value: "distance" | "rating" | "reviews") => setSortBy(value)}>
+            <Select value={sortBy} onValueChange={(value: "distance" | "rating" | "popularity") => setSortBy(value)}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="popularity">Popularity</SelectItem>
                 <SelectItem value="distance">Distance</SelectItem>
                 <SelectItem value="rating">Rating</SelectItem>
-                <SelectItem value="reviews">Reviews</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -336,6 +336,12 @@ const GymsNearYou = () => {
                               <Star className="w-3 h-3 fill-warning text-warning flex-shrink-0" />
                               <span>{gym.rating}</span>
                             </div>
+                          )}
+                          {gym.user_ratings_total && (
+                            <>
+                              <span className="text-muted-foreground/50 flex-shrink-0">•</span>
+                              <span className="flex-shrink-0">({gym.user_ratings_total})</span>
+                            </>
                           )}
                           <span className="text-muted-foreground/50 flex-shrink-0">•</span>
                           <span className="flex-shrink-0">{formatDistance(gym.distance)}</span>
