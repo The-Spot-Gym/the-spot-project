@@ -118,6 +118,76 @@ export const messageService = {
   },
 
   /**
+   * Delete a message (only own messages)
+   */
+  async deleteMessage(messageId: string): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      console.error('Error deleting message:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  },
+
+  /**
+   * Get reactions for messages
+   */
+  async getReactions(messageIds: string[]): Promise<Record<string, Array<{ emoji: string; user_id: string }>>> {
+    if (messageIds.length === 0) return {};
+
+    const { data, error } = await supabase
+      .from('message_reactions')
+      .select('message_id, emoji, user_id')
+      .in('message_id', messageIds);
+
+    if (error) {
+      console.error('Error fetching reactions:', error);
+      return {};
+    }
+
+    const grouped: Record<string, Array<{ emoji: string; user_id: string }>> = {};
+    for (const r of data || []) {
+      if (!grouped[r.message_id]) grouped[r.message_id] = [];
+      grouped[r.message_id].push({ emoji: r.emoji, user_id: r.user_id });
+    }
+    return grouped;
+  },
+
+  /**
+   * Toggle a reaction on a message
+   */
+  async toggleReaction(messageId: string, emoji: string): Promise<{ success: boolean }> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false };
+
+    // Check if reaction exists
+    const { data: existing } = await supabase
+      .from('message_reactions')
+      .select('id')
+      .eq('message_id', messageId)
+      .eq('user_id', user.id)
+      .eq('emoji', emoji)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id);
+    } else {
+      await supabase.from('message_reactions').insert({
+        message_id: messageId,
+        user_id: user.id,
+        emoji,
+      });
+    }
+
+    return { success: true };
+  },
+
+  /**
    * Create a new conversation
    */
   async createConversation(
