@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Users, MapPin, Loader2, UsersRound } from "lucide-react";
+import { UserPlus, Users, MapPin, Loader2, UsersRound, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFriends } from "@/hooks/useFriends";
@@ -23,19 +24,55 @@ interface FriendRecommendation {
   recommendation_source: 'gym' | 'mutual_friend' | 'nearby';
 }
 
+interface SearchResult {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 const FriendRecommendations = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { sendRequest } = useFriends();
+  const { sendRequest, friends } = useFriends();
   const [recommendations, setRecommendations] = useState<FriendRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingRequests, setSendingRequests] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchRecommendations();
     }
   }, [user]);
+
+  // Debounced username search
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    const timeout = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .neq('user_id', user?.id || '')
+        .ilike('username', `%${query}%`)
+        .limit(10);
+
+      if (!error && data) {
+        setSearchResults(data);
+      }
+      setSearching(false);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery, user?.id]);
 
   const fetchRecommendations = async () => {
     try {
@@ -46,7 +83,6 @@ const FriendRecommendations = () => {
       });
 
       if (error) {
-        // Fall back to gym-based recommendations if comprehensive function fails
         console.warn('Comprehensive recommendations failed, falling back to gym-based:', error);
         const { data: gymData, error: gymError } = await supabase.rpc('get_gym_based_friend_recommendations', {
           current_user_id: user?.id,
@@ -71,6 +107,7 @@ const FriendRecommendations = () => {
     
     if (success) {
       setRecommendations(prev => prev.filter(rec => rec.user_id !== friendId));
+      setSearchResults(prev => prev.filter(r => r.user_id !== friendId));
     }
     
     setSendingRequests(prev => {
@@ -80,16 +117,7 @@ const FriendRecommendations = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Friend Recommendations" showBackButton />
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
+  const friendIds = new Set(friends.map(f => f.user_id));
 
   const getSourceIcon = (source: string) => {
     switch (source) {
@@ -113,8 +141,75 @@ const FriendRecommendations = () => {
     <div className="min-h-screen bg-background">
       <PageHeader title="Find Friends" showBackButton onBack={() => navigate(ROUTES.HOME)} />
 
-      <main className="max-w-4xl mx-auto p-4">
-        <Card className="mb-6">
+      <main className="max-w-4xl mx-auto p-4 space-y-6">
+        {/* Search by Username */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              Search by Username
+            </CardTitle>
+            <CardDescription>Find people by their username</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search username..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {searching && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No users found</p>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {searchResults.map((result) => {
+                  const isFriend = friendIds.has(result.user_id);
+                  return (
+                    <div key={result.user_id} className="flex items-center justify-between gap-3 p-3 rounded-lg border">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className="w-10 h-10 flex-shrink-0">
+                          {result.avatar_url && <AvatarImage src={result.avatar_url} />}
+                          <AvatarFallback>{result.display_name?.[0] || result.username?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{result.display_name || result.username}</p>
+                          <p className="text-sm text-muted-foreground truncate">@{result.username}</p>
+                        </div>
+                      </div>
+                      {isFriend ? (
+                        <Badge variant="secondary">Friends</Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendFriendRequest(result.user_id)}
+                          disabled={sendingRequests.has(result.user_id)}
+                        >
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          {sendingRequests.has(result.user_id) ? 'Sending...' : 'Add'}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recommendations */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
@@ -126,7 +221,11 @@ const FriendRecommendations = () => {
           </CardHeader>
         </Card>
 
-        {recommendations.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : recommendations.length === 0 ? (
           <Card className="p-8">
             <EmptyState
               icon={Users}

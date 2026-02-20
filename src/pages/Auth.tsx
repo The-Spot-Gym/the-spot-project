@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Dumbbell, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const signUpSchema = z.object({
@@ -32,6 +33,29 @@ const Auth = () => {
     displayName: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Debounced username check during signup
+  useEffect(() => {
+    if (!isSignUp) return;
+    const username = formData.username.trim();
+    if (username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+    setCheckingUsername(true);
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle();
+      setUsernameAvailable(!data);
+      setCheckingUsername(false);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [formData.username, isSignUp]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -63,6 +87,11 @@ const Auth = () => {
     e.preventDefault();
     
     if (!validateForm()) {
+      return;
+    }
+
+    if (isSignUp && usernameAvailable === false) {
+      setErrors(prev => ({ ...prev, username: 'This username is already taken' }));
       return;
     }
 
@@ -129,10 +158,24 @@ const Auth = () => {
                       placeholder="Choose a username"
                       value={formData.username}
                       onChange={(e) => handleInputChange('username', e.target.value)}
-                      className={`pl-10 ${errors.username ? 'border-destructive' : ''}`}
+                      className={`pl-10 pr-10 ${errors.username ? 'border-destructive' : usernameAvailable === true ? 'border-green-500' : ''}`}
                     />
+                    {formData.username.trim().length >= 3 && (
+                      <div className="absolute right-3 top-3">
+                        {checkingUsername ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : usernameAvailable === true ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : usernameAvailable === false ? (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                   {errors.username && <p className="text-sm text-destructive mt-1">{errors.username}</p>}
+                  {!errors.username && usernameAvailable === false && (
+                    <p className="text-sm text-destructive mt-1">This username is already taken</p>
+                  )}
                 </div>
 
                 <div>
