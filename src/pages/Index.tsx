@@ -128,6 +128,12 @@ const Index = () => {
     return null;
   }
 
+  // Redirect to profile setup if user hasn't completed their profile
+  if (user && !profileLoading && !profile?.username) {
+    navigate(ROUTES.PROFILE_SETUP, { replace: true });
+    return <LoadingState message="Setting up your profile..." fullScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-background pb-safe">
       {/* Safe area spacer for iOS notch/Dynamic Island */}
