@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Camera, Save, Loader2 } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Camera, Save, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,20 +10,48 @@ import { AvatarCropper } from "@/components/AvatarCropper";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export const ProfileTab = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { profile, updateProfile } = useProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [formData, setFormData] = useState({
     username: profile?.username || "",
     display_name: profile?.display_name || "",
     bio: profile?.bio || "",
   });
+
+  // Debounced username availability check
+  useEffect(() => {
+    const username = formData.username.trim();
+    if (!username || username.length < 3 || username === profile?.username) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    setCheckingUsername(true);
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .neq('user_id', user?.id || '')
+        .maybeSingle();
+      
+      setUsernameAvailable(!data);
+      setCheckingUsername(false);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [formData.username, profile?.username, user?.id]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -87,6 +115,14 @@ export const ProfileTab = () => {
   };
 
   const handleSaveProfile = async () => {
+    if (usernameAvailable === false) {
+      toast({
+        variant: "destructive",
+        title: "Username taken",
+        description: "Please choose a different username.",
+      });
+      return;
+    }
     setLoading(true);
     await updateProfile(formData);
     setLoading(false);
@@ -99,6 +135,8 @@ export const ProfileTab = () => {
       </div>
     );
   }
+
+  const usernameChanged = formData.username.trim() !== profile.username;
 
   return (
     <>
@@ -150,12 +188,29 @@ export const ProfileTab = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Enter username"
-              />
+              <div className="relative">
+                <Input
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="Enter username"
+                  className={usernameChanged && usernameAvailable === false ? 'border-destructive pr-10' : usernameChanged && usernameAvailable === true ? 'border-green-500 pr-10' : ''}
+                />
+                {usernameChanged && (
+                  <div className="absolute right-3 top-3">
+                    {checkingUsername ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : usernameAvailable === true ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : usernameAvailable === false ? (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              {usernameChanged && usernameAvailable === false && (
+                <p className="text-sm text-destructive">This username is already taken</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -179,7 +234,7 @@ export const ProfileTab = () => {
               />
             </div>
 
-            <Button onClick={handleSaveProfile} disabled={loading}>
+            <Button onClick={handleSaveProfile} disabled={loading || (usernameChanged && usernameAvailable === false)}>
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
