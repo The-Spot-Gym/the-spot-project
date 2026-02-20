@@ -165,6 +165,24 @@ export type Database = {
           },
         ]
       }
+      gym_search_log: {
+        Row: {
+          id: string
+          searched_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          searched_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          searched_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gym_visits: {
         Row: {
           created_at: string

@@ -134,10 +134,17 @@ const GymsNearYou = () => {
 
       if (error) throw error;
 
+      if (data?.limit_reached) {
+        setErrorMessage(data.message || "Daily search limit reached. Try again tomorrow!");
+        return;
+      }
+
       setGyms(data.gyms || []);
       setErrorMessage(null);
-    } catch (error) {
-      const message = "Failed to load nearby gyms. Please try again.";
+    } catch (error: any) {
+      const message = error?.message?.includes('limit') 
+        ? "You've reached your daily gym search limit (2/day). Try again tomorrow!"
+        : "Failed to load nearby gyms. Please try again.";
       handleError(error, message);
       setErrorMessage(message);
     } finally {
@@ -164,8 +171,13 @@ const GymsNearYou = () => {
 
       if (error) throw error;
 
+      if (data?.limit_reached) {
+        setSearchResults([]);
+        return;
+      }
+
       setSearchResults(data.gyms || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching gyms:', error);
       setSearchResults([]);
     } finally {
