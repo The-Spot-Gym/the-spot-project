@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const MAX_SEARCHES_PER_DAY = 2;
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -80,36 +80,6 @@ Deno.serve(async (req) => {
     // Service role client for DB operations
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Rate limit check: max 2 searches per day
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const { count, error: countError } = await supabase
-      .from('gym_search_log')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('searched_at', todayStart.toISOString());
-
-    if (countError) {
-      console.error('Error checking rate limit:', countError);
-    }
-
-    if ((count ?? 0) >= MAX_SEARCHES_PER_DAY) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Daily search limit reached',
-          message: `You can only search for gyms ${MAX_SEARCHES_PER_DAY} times per day. Try again tomorrow!`,
-          limit_reached: true
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Log this search
-    await supabase
-      .from('gym_search_log')
-      .insert({ user_id: userId });
 
     const allPlaces = new Map();
     
