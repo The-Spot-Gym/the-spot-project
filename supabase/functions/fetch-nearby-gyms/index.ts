@@ -5,12 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const MAX_SEARCHES_PER_DAY = 2;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+
     const { latitude, longitude, radius = 5000, searchQuery } = await req.json();
 
     const googleApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
@@ -22,10 +50,39 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    // Service role client for DB operations
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Rate limit check: max 2 searches per day
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { count, error: countError } = await supabase
+      .from('gym_search_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('searched_at', todayStart.toISOString());
+
+    if (countError) {
+      console.error('Error checking rate limit:', countError);
+    }
+
+    if ((count ?? 0) >= MAX_SEARCHES_PER_DAY) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Daily search limit reached',
+          message: `You can only search for gyms ${MAX_SEARCHES_PER_DAY} times per day. Try again tomorrow!`,
+          limit_reached: true
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Log this search
+    await supabase
+      .from('gym_search_log')
+      .insert({ user_id: userId });
 
     const allPlaces = new Map();
     
@@ -33,7 +90,6 @@ Deno.serve(async (req) => {
     if (searchQuery && searchQuery.trim().length > 0) {
       console.log('Searching for gym:', searchQuery);
       
-      // Search for the specific gym by name
       const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery + ' gym')}&type=gym&key=${googleApiKey}`;
       
       try {
@@ -54,7 +110,7 @@ Deno.serve(async (req) => {
         console.error('Error searching:', error);
       }
     } else {
-      // Location-based nearby search (original behavior)
+      // Location-based nearby search
       if (!latitude || !longitude) {
         return new Response(
           JSON.stringify({ error: 'Latitude and longitude are required for nearby search' }),
@@ -62,7 +118,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Call Google Places API - Text Search for better results
       const searchQueries = [
         'gym',
         'fitness center',
@@ -74,7 +129,6 @@ Deno.serve(async (req) => {
 
       console.log('Fetching nearby gyms from Google Places API...');
 
-      // Fetch all queries in parallel for better performance
       const fetchPromises = searchQueries.map(async (query) => {
         const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
         
@@ -96,7 +150,6 @@ Deno.serve(async (req) => {
 
       const results = await Promise.all(fetchPromises);
       
-      // Combine all results and deduplicate
       for (const placeList of results) {
         for (const place of placeList) {
           if (!allPlaces.has(place.place_id)) {
@@ -108,47 +161,25 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${allPlaces.size} unique gyms`);
 
-    // Helper to estimate distance in kilometers between two coordinates
     const toRadians = (deg: number) => (deg * Math.PI) / 180;
-    const calculateDistanceKm = (
-      lat1: number,
-      lon1: number,
-      lat2: number,
-      lon2: number,
-    ) => {
-      const R = 6371; // Earth radius in km
+    const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371;
       const dLat = toRadians(lat2 - lat1);
       const dLon = toRadians(lon2 - lon1);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
 
-    // Prepare all gym data with validation and distance calculation
     const gymsWithDistance = Array.from(allPlaces.values())
-      .filter(place => {
-        // Validate required fields
-        if (!place.place_id || !place.name || !place.geometry?.location?.lat || !place.geometry?.location?.lng) {
-          console.warn('Skipping invalid gym data:', place.name || 'unknown');
-          return false;
-        }
-        return true;
-      })
+      .filter(place => place.place_id && place.name && place.geometry?.location?.lat && place.geometry?.location?.lng)
       .map(place => {
-        // Calculate distance only if we have user location
         let distanceKm = 0;
         if (latitude && longitude) {
-          distanceKm = calculateDistanceKm(
-            latitude,
-            longitude,
-            place.geometry.location.lat,
-            place.geometry.location.lng,
-          );
+          distanceKm = calculateDistanceKm(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng);
         }
-
         return {
           google_place_id: place.place_id,
           name: place.name,
@@ -164,29 +195,20 @@ Deno.serve(async (req) => {
         };
       });
 
-    // Sort by distance (if available) or rating and limit to reduce database load
     const MAX_GYMS = 30;
     const limitedGymsWithDistance = gymsWithDistance
-      .sort((a, b) => {
-        if (latitude && longitude) {
-          return a._distanceKm - b._distanceKm;
-        }
-        // Sort by rating if no location
-        return (b.rating || 0) - (a.rating || 0);
-      })
+      .sort((a, b) => latitude && longitude ? a._distanceKm - b._distanceKm : (b.rating || 0) - (a.rating || 0))
       .slice(0, MAX_GYMS);
 
     const gymDataArray = limitedGymsWithDistance.map(({ _distanceKm, ...gym }) => gym);
 
     console.log(`Validated ${gymDataArray.length} gyms for database insert`);
 
-    // Process in smaller batches to avoid timeouts and size limits
     const BATCH_SIZE = 10;
     const allGyms = [];
     
     for (let i = 0; i < gymDataArray.length; i += BATCH_SIZE) {
       const batch = gymDataArray.slice(i, i + BATCH_SIZE);
-      
       try {
         const { data: batchGyms, error: batchError } = await supabase
           .from('gyms')
@@ -195,16 +217,13 @@ Deno.serve(async (req) => {
 
         if (batchError) {
           console.error(`Error upserting batch ${i / BATCH_SIZE + 1}:`, batchError);
-          // Continue with other batches even if one fails
           continue;
         }
-
         if (batchGyms) {
           allGyms.push(...batchGyms);
         }
       } catch (error) {
         console.error(`Exception in batch ${i / BATCH_SIZE + 1}:`, error);
-        // Continue with other batches
       }
     }
 

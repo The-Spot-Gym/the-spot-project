@@ -1,1 +1,13 @@
 project_id = "zbsqoqixzrpvgseisgak"
+
+[functions.fetch-gym-details]
+verify_jwt = false
+
+[functions.fetch-nearby-gyms]
+verify_jwt = false
+
+[functions.upload-avatar]
+verify_jwt = false
+
+[functions.create-test-friend]
+verify_jwt = false
