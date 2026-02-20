@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { workoutService } from "@/services/workoutService";
 import { StatCard } from "@/components/StatCard";
 import { ROUTES } from "@/constants/routes";
+import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { useWorkoutLogger } from "@/hooks/useWorkoutLogger";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
 import { RecentWorkouts } from "@/components/workout/RecentWorkouts";
@@ -22,6 +23,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const { unreadMessages, pendingFriendRequests } = useNotificationCounts();
   const [streakData, setStreakData] = useState<LeaderboardStats | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutSession[]>([]);
 
@@ -145,9 +147,14 @@ const Index = () => {
               variant="ghost" 
               size="icon" 
               onClick={() => navigate(ROUTES.MESSAGES)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 relative"
             >
               <MessageCircle className="h-5 w-5" />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </span>
+              )}
             </Button>
 
             {profile && (
@@ -183,10 +190,20 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => navigate(ROUTES.MESSAGES)}>
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Messages
+                      {unreadMessages > 0 && (
+                        <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                          {unreadMessages > 99 ? '99+' : unreadMessages}
+                        </span>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_REQUESTS)}>
                       <UserPlus className="mr-2 h-4 w-4" />
                       Friend Requests
+                      {pendingFriendRequests > 0 && (
+                        <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                          {pendingFriendRequests > 99 ? '99+' : pendingFriendRequests}
+                        </span>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_RECOMMENDATIONS)}>
                       <Users className="mr-2 h-4 w-4" />
