@@ -531,16 +531,15 @@ const ProfileSetup = () => {
           {currentStep === 4 && renderStep4()}
 
           <div className="flex justify-between mt-8">
-            <Button variant="outline" onClick={handleBack}>
+            <Button variant="outline" onClick={handleBack} className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </Button>
             
             <Button 
-              variant="hero" 
               onClick={handleNext}
               disabled={!isStepValid() || saving}
-              className="bg-white text-primary hover:bg-white/90"
+              className="bg-white !text-gray-900 hover:bg-white/90"
             >
               {saving ? 'Saving...' : (currentStep === 4 ? 'Complete Setup' : 'Next')}
               <ArrowRight className="w-4 h-4 ml-2" />
