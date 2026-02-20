@@ -39,7 +39,34 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    const { latitude, longitude, radius = 5000, searchQuery } = await req.json();
+    const { latitude, longitude, radius: rawRadius, searchQuery } = await req.json();
+
+    // Input validation
+    if (latitude !== undefined && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid latitude (must be between -90 and 90)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (longitude !== undefined && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid longitude (must be between -180 and 180)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const radius = typeof rawRadius === 'number' ? Math.min(Math.max(rawRadius, 0), 50000) : 5000;
+    if (searchQuery !== undefined && typeof searchQuery !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid search query' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (typeof searchQuery === 'string' && searchQuery.length > 200) {
+      return new Response(
+        JSON.stringify({ error: 'Search query too long (max 200 characters)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const googleApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!googleApiKey) {

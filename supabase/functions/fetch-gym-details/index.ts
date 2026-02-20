@@ -37,9 +37,18 @@ Deno.serve(async (req) => {
 
     const { gymId } = await req.json();
 
-    if (!gymId) {
+    if (!gymId || typeof gymId !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Gym ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(gymId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid gym ID format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
