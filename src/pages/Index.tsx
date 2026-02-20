@@ -210,7 +210,7 @@ const Index = () => {
                       Find Friends
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE_SETUP)}>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)}>
                       <User className="mr-2 h-4 w-4" />
                       Edit Profile
                     </DropdownMenuItem>
