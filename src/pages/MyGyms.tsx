@@ -1,33 +1,15 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dumbbell, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/useAuth";
-import { gymService } from "@/services/gymService";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ROUTES } from "@/constants/routes";
-import type { Gym } from "@/types";
+import { useUserGymsQuery } from "@/hooks/queries/useGymQueries";
 
 const MyGyms = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [myGyms, setMyGyms] = useState<Gym[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      loadMyGyms();
-    }
-  }, [user]);
-
-  const loadMyGyms = async () => {
-    setLoading(true);
-    const gyms = await gymService.getUserGyms();
-    setMyGyms(gyms);
-    setLoading(false);
-  };
+  const { data: myGyms = [], isLoading: loading } = useUserGymsQuery();
 
   if (loading) {
     return (
