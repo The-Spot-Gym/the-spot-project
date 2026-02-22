@@ -23,6 +23,7 @@ import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
 import FriendRequests from "./pages/FriendRequests";
 import FriendRecommendations from "./pages/FriendRecommendations";
+import MyFriends from "./pages/MyFriends";
 import WorkoutPlans from "./pages/WorkoutPlans";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
@@ -94,6 +95,7 @@ const AppContent = () => {
         <Route path="/chat/:conversationId" element={<Chat />} />
         <Route path="/friend-requests" element={<FriendRequests />} />
         <Route path="/friend-recommendations" element={<FriendRecommendations />} />
+        <Route path="/my-friends" element={<MyFriends />} />
         <Route path="/workout-plans" element={<WorkoutPlans />} />
         <Route path="/privacy" element={<Privacy />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
