@@ -211,8 +211,12 @@ const Index = () => {
                         </span>
                       )}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_RECOMMENDATIONS)}>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.MY_FRIENDS)}>
                       <Users className="mr-2 h-4 w-4" />
+                      My Friends
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(ROUTES.FRIEND_RECOMMENDATIONS)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
                       Find Friends
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

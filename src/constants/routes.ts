@@ -13,4 +13,5 @@ export const ROUTES = {
   FRIEND_REQUESTS: '/friend-requests',
   FRIEND_RECOMMENDATIONS: '/friend-recommendations',
   WORKOUT_PLANS: '/workout-plans',
+  MY_FRIENDS: '/my-friends',
 } as const;
