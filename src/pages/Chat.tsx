@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useConversationDetails } from "@/hooks/useConversationDetails";
 import { messageService } from "@/services/messageService";
+import { conversationService } from "@/services/conversationService";
 import { supabase } from "@/integrations/supabase/client";
 import type { MessageWithProfile } from "@/types/api";
 
@@ -63,6 +64,13 @@ const Chat = () => {
       supabase.removeChannel(channel);
     };
   }, [conversationId, fetchReactions]);
+
+  // Mark messages as read when conversation opens or new messages arrive
+  useEffect(() => {
+    if (conversationId && user?.id && messages.length > 0) {
+      conversationService.markMessagesAsRead(conversationId, user.id);
+    }
+  }, [conversationId, user?.id, messages]);
 
   useEffect(() => {
     scrollToBottom();
