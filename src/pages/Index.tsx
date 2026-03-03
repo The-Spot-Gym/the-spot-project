@@ -293,7 +293,7 @@ const Index = () => {
             onRemoveExercise={removeExerciseFromSession}
             onCompleteWorkout={handleLogWorkout}
           />
-          <RecentWorkouts workouts={recentWorkouts} />
+          <RecentWorkouts workouts={recentWorkouts} onWorkoutDeleted={fetchRecentWorkouts} />
         </div>
       </div>
     </div>

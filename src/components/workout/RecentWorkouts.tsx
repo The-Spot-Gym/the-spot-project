@@ -1,24 +1,30 @@
 import { useState } from "react";
-import { Dumbbell, ChevronDown, ChevronUp } from "lucide-react";
+import { Dumbbell, ChevronDown, ChevronUp, Trash2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/utils/date";
 import { workoutService } from "@/services/workoutService";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { WorkoutSession, WorkoutExercise } from "@/types";
 
 interface RecentWorkoutsProps {
   workouts: WorkoutSession[];
+  onWorkoutDeleted?: () => void;
 }
 
 interface WorkoutItemProps {
   workout: WorkoutSession;
+  onDeleted?: () => void;
 }
 
-const WorkoutItem = ({ workout }: WorkoutItemProps) => {
+const WorkoutItem = ({ workout, onDeleted }: WorkoutItemProps) => {
   const [expanded, setExpanded] = useState(false);
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [loadingExercises, setLoadingExercises] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
 
   const toggleExpanded = async () => {
     if (!expanded && exercises.length === 0) {
@@ -28,6 +34,22 @@ const WorkoutItem = ({ workout }: WorkoutItemProps) => {
       setLoadingExercises(false);
     }
     setExpanded(!expanded);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleting(true);
+    try {
+      await supabase.from('workout_exercises').delete().eq('session_id', workout.id);
+      const { error } = await supabase.from('workout_sessions').delete().eq('id', workout.id);
+      if (error) throw error;
+      toast({ title: "Workout deleted" });
+      onDeleted?.();
+    } catch {
+      toast({ title: "Error", description: "Failed to delete workout.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -43,6 +65,15 @@ const WorkoutItem = ({ workout }: WorkoutItemProps) => {
           )}
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          </Button>
           {expanded ? (
             <ChevronUp className="w-4 h-4" />
           ) : (
@@ -82,7 +113,7 @@ const WorkoutItem = ({ workout }: WorkoutItemProps) => {
   );
 };
 
-export const RecentWorkouts = ({ workouts }: RecentWorkoutsProps) => {
+export const RecentWorkouts = ({ workouts, onWorkoutDeleted }: RecentWorkoutsProps) => {
   return (
     <Card>
       <CardHeader>
@@ -99,7 +130,7 @@ export const RecentWorkouts = ({ workouts }: RecentWorkoutsProps) => {
         ) : (
           <div className="space-y-3">
             {workouts.map((workout) => (
-              <WorkoutItem key={workout.id} workout={workout} />
+              <WorkoutItem key={workout.id} workout={workout} onDeleted={onWorkoutDeleted} />
             ))}
           </div>
         )}
