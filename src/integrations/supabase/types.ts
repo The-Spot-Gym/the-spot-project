@@ -598,6 +598,10 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_gym_member: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: boolean
+      }
       mark_messages_as_read: {
         Args: { conversation_uuid: string; reader_user_id: string }
         Returns: undefined
