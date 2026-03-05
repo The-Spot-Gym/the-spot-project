@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, MessageCircle, Trophy, Dumbbell, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { Loader2, MessageCircle, Trophy, Dumbbell, ChevronDown, ChevronUp, Copy, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +25,10 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [sessionExercises, setSessionExercises] = useState<Record<string, WorkoutExercise[]>>({});
   const [copying, setCopying] = useState(false);
+  const [savedPlans, setSavedPlans] = useState<any[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+  const [planExercises, setPlanExercises] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     if (!friend) {
@@ -32,14 +36,18 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
       setWorkouts([]);
       setExpandedSession(null);
       setSessionExercises({});
+      setSavedPlans([]);
+      setExpandedPlan(null);
+      setPlanExercises({});
       return;
     }
 
     const fetchData = async () => {
       setStatsLoading(true);
       setWorkoutsLoading(true);
+      setPlansLoading(true);
 
-      const [statsRes, workoutsRes] = await Promise.all([
+      const [statsRes, workoutsRes, plansRes] = await Promise.all([
         supabase
           .from('leaderboard_stats')
           .select('*')
@@ -51,16 +59,41 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
           .eq('user_id', friend.user_id)
           .order('session_date', { ascending: false })
           .limit(10),
+        supabase
+          .from('workout_plans')
+          .select('*')
+          .eq('user_id', friend.user_id)
+          .order('created_at', { ascending: false }),
       ]);
 
       setFriendStats(statsRes.data as LeaderboardStats | null);
       setStatsLoading(false);
       setWorkouts(workoutsRes.data || []);
       setWorkoutsLoading(false);
+      setSavedPlans(plansRes.data || []);
+      setPlansLoading(false);
     };
 
     fetchData();
   }, [friend]);
+
+  const togglePlan = async (planId: string) => {
+    if (expandedPlan === planId) {
+      setExpandedPlan(null);
+      return;
+    }
+    setExpandedPlan(planId);
+
+    if (!planExercises[planId]) {
+      const { data } = await supabase
+        .from('workout_plan_exercises')
+        .select('*')
+        .eq('plan_id', planId)
+        .order('order_index', { ascending: true });
+
+      setPlanExercises(prev => ({ ...prev, [planId]: data || [] }));
+    }
+  };
 
   const toggleSession = async (sessionId: string) => {
     if (expandedSession === sessionId) {
@@ -306,7 +339,65 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
                 )}
               </div>
 
-              {/* Actions */}
+              {/* Saved Workout Plans */}
+              <div>
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                  <BookOpen className="w-4 h-4" />
+                  Saved Workout Plans
+                </h3>
+                {plansLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : savedPlans.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No saved plans yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {savedPlans.map((plan) => (
+                      <div key={plan.id} className="border rounded-lg overflow-hidden">
+                        <button
+                          className="w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors"
+                          onClick={() => togglePlan(plan.id)}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{plan.name}</p>
+                            {plan.description && (
+                              <p className="text-xs text-muted-foreground truncate">{plan.description}</p>
+                            )}
+                          </div>
+                          {expandedPlan === plan.id ? (
+                            <ChevronUp className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                          )}
+                        </button>
+
+                        {expandedPlan === plan.id && (
+                          <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                            {!planExercises[plan.id] ? (
+                              <div className="flex justify-center py-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              </div>
+                            ) : planExercises[plan.id].length === 0 ? (
+                              <p className="text-xs text-muted-foreground">No exercises in this plan</p>
+                            ) : (
+                              planExercises[plan.id].map((ex: any) => (
+                                <div key={ex.id} className="flex justify-between text-sm">
+                                  <span className="font-medium">{ex.exercise_name}</span>
+                                  <span className="text-muted-foreground">
+                                    {ex.sets}×{ex.reps} @ {ex.weight}lbs
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Button
                 variant="fitness"
                 className="w-full"
