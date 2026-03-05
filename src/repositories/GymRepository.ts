@@ -31,29 +31,12 @@ export class GymRepository {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Not authenticated' };
 
-    const { data: existing } = await supabase
-      .from('gym_memberships')
-      .select('id, is_active')
-      .eq('user_id', user.id)
-      .eq('gym_id', gymId)
-      .maybeSingle();
-
-    if (existing && existing.is_active) {
-      return { success: true };
-    }
-
-    if (existing && !existing.is_active) {
-      const { error } = await supabase
-        .from('gym_memberships')
-        .update({ is_active: true })
-        .eq('id', existing.id);
-      if (error) return { success: false, error: error.message };
-      return { success: true };
-    }
-
     const { error } = await supabase
       .from('gym_memberships')
-      .insert({ user_id: user.id, gym_id: gymId });
+      .upsert(
+        { user_id: user.id, gym_id: gymId, is_active: true },
+        { onConflict: 'user_id,gym_id' }
+      );
 
     if (error) {
       console.error('Error joining gym:', error);
