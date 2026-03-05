@@ -136,13 +136,13 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
 
   return (
     <Dialog open={!!friend} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Profile</DialogTitle>
         </DialogHeader>
 
         {friend && (
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="flex-1 -mx-6 px-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 120px)' }}>
             <div className="space-y-6 pb-4">
               {/* Profile Header */}
               <div className="flex flex-col items-center text-center gap-3">
