@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@/types';
@@ -12,6 +13,7 @@ interface CurrentUser {
 }
 
 export const useGymDetails = (gymId: string | undefined) => {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [gymData, setGymData] = useState<GymDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,6 +147,7 @@ export const useGymDetails = (gymId: string | undefined) => {
       if (error) throw error;
 
       setHasJoined(true);
+      queryClient.invalidateQueries({ queryKey: ['gyms', 'user'] });
       toast({
         title: "Success!",
         description: `You've joined ${gymData?.name}!`,
@@ -174,6 +177,7 @@ export const useGymDetails = (gymId: string | undefined) => {
       if (error) throw error;
 
       setHasJoined(false);
+      queryClient.invalidateQueries({ queryKey: ['gyms', 'user'] });
       toast({
         title: "Left gym",
         description: `You've left ${gymData?.name}`,
