@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, MessageCircle, Trophy, Dumbbell, ChevronDown, ChevronUp, Copy, BookOpen } from "lucide-react";
+import { Loader2, MessageCircle, Trophy, Dumbbell, ChevronDown, ChevronUp, Copy, BookOpen, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +29,8 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
   const [plansLoading, setPlansLoading] = useState(false);
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [planExercises, setPlanExercises] = useState<Record<string, any[]>>({});
+  const [friendGyms, setFriendGyms] = useState<any[]>([]);
+  const [gymsLoading, setGymsLoading] = useState(false);
 
   useEffect(() => {
     if (!friend) {
@@ -39,6 +41,7 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
       setSavedPlans([]);
       setExpandedPlan(null);
       setPlanExercises({});
+      setFriendGyms([]);
       return;
     }
 
@@ -46,8 +49,9 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
       setStatsLoading(true);
       setWorkoutsLoading(true);
       setPlansLoading(true);
+      setGymsLoading(true);
 
-      const [statsRes, workoutsRes, plansRes] = await Promise.all([
+      const [statsRes, workoutsRes, plansRes, gymsRes] = await Promise.all([
         supabase
           .from('leaderboard_stats')
           .select('*')
@@ -64,6 +68,11 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
           .select('*')
           .eq('user_id', friend.user_id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('gym_memberships')
+          .select('*, gyms(*)')
+          .eq('user_id', friend.user_id)
+          .eq('is_active', true),
       ]);
 
       setFriendStats(statsRes.data as LeaderboardStats | null);
@@ -72,6 +81,8 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
       setWorkoutsLoading(false);
       setSavedPlans(plansRes.data || []);
       setPlansLoading(false);
+      setFriendGyms(gymsRes.data || []);
+      setGymsLoading(false);
     };
 
     fetchData();
@@ -261,6 +272,35 @@ export const FriendProfileDialog = ({ friend, onClose, onMessage }: FriendProfil
               ) : (
                 <p className="text-sm text-muted-foreground text-center">No workout stats yet</p>
               )}
+
+              {/* Gyms */}
+              <div>
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  Gyms
+                </h3>
+                {gymsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : friendGyms.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No gyms joined yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {friendGyms.map((membership: any) => (
+                      <div key={membership.id} className="flex items-center gap-3 p-2.5 border rounded-lg">
+                        <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{membership.gyms?.name}</p>
+                          {membership.gyms?.address && (
+                            <p className="text-xs text-muted-foreground truncate">{membership.gyms.address}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Recent Workouts */}
               <div>
