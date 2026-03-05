@@ -89,7 +89,7 @@ const GymDetails = () => {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="mt-6">
-            <Leaderboard gymName={gymData.name} hasJoined={isMember} onJoinGym={joinGym} />
+            <Leaderboard gymId={gymId!} gymName={gymData.name} hasJoined={isMember} onJoinGym={joinGym} />
           </TabsContent>
         </Tabs>
       </div>
