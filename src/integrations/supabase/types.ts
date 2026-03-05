@@ -594,6 +594,16 @@ export type Database = {
           username: string
         }[]
       }
+      get_gym_leaderboard: {
+        Args: { _gym_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          personal_records: Json
+          user_id: string
+          username: string
+        }[]
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean

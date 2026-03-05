@@ -10,12 +10,13 @@ import { useAuth } from "@/hooks/useAuth";
 import type { LeaderboardEntry } from "@/types/components";
 
 interface LeaderboardProps {
+  gymId: string;
   gymName: string;
   hasJoined?: boolean;
   onJoinGym?: () => void;
 }
 
-const Leaderboard = ({ gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
+const Leaderboard = ({ gymId, gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
   const { user } = useAuth();
   const [benchData, setBenchData] = useState<LeaderboardEntry[]>([]);
   const [squatData, setSquatData] = useState<LeaderboardEntry[]>([]);
@@ -23,16 +24,7 @@ const Leaderboard = ({ gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
 
   const fetchLeaderboardData = async () => {
     const { data, error } = await supabase
-      .from('leaderboard_stats')
-      .select(`
-        user_id,
-        personal_records,
-        profiles!inner(
-          display_name,
-          username,
-          avatar_url
-        )
-      `);
+      .rpc('get_gym_leaderboard', { _gym_id: gymId });
 
     if (error) {
       console.error('Error fetching leaderboard:', error);
@@ -47,14 +39,13 @@ const Leaderboard = ({ gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
         .map(entry => {
           const records = entry.personal_records as any;
           const weight = records?.[exerciseKey] || 0;
-          const profile = entry.profiles as any;
           
           return {
             user_id: entry.user_id,
-            name: profile?.display_name || profile?.username || 'Anonymous',
-            avatar: profile?.avatar_url,
+            name: entry.display_name || entry.username || 'Anonymous',
+            avatar: entry.avatar_url,
             weight,
-            improvement: 0, // Could calculate from historical data
+            improvement: 0,
           };
         })
         .filter(entry => entry.weight > 0)
