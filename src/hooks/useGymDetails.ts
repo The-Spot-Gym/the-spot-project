@@ -131,15 +131,36 @@ export const useGymDetails = (gymId: string | undefined) => {
     }
 
     try {
-      const { error } = await supabase
+      // Check for existing membership first
+      const { data: existing } = await supabase
         .from('gym_memberships')
-        .insert({
-          user_id: currentUser.id,
-          gym_id: gymId,
-          is_active: true
-        });
+        .select('id, is_active')
+        .eq('user_id', currentUser.id)
+        .eq('gym_id', gymId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing && existing.is_active) {
+        setHasJoined(true);
+        toast({ title: "Already a member", description: `You're already a member of ${gymData?.name}.` });
+        return true;
+      }
+
+      if (existing && !existing.is_active) {
+        const { error } = await supabase
+          .from('gym_memberships')
+          .update({ is_active: true })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('gym_memberships')
+          .insert({
+            user_id: currentUser.id,
+            gym_id: gymId,
+            is_active: true
+          });
+        if (error) throw error;
+      }
 
       setHasJoined(true);
       toast({
