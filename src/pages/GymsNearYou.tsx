@@ -294,6 +294,33 @@ const GymsNearYou = () => {
           <p className="text-muted-foreground">Discover your perfect fitness community</p>
         </div>
 
+        {/* Address Search */}
+        <div className="mb-4">
+          <AddressAutocomplete onLocationSelect={handleAddressSelect} />
+        </div>
+
+        {customAddress && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">Showing gyms near: <span className="font-medium text-foreground">{customAddress}</span></span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto flex-shrink-0 h-6 px-2 text-xs"
+              onClick={() => {
+                setCustomAddress(null);
+                if (hasPromptedBefore) {
+                  setUserLocation(null);
+                  setGyms([]);
+                  requestLocation();
+                }
+              }}
+            >
+              Use my location
+            </Button>
+          </div>
+        )}
+
         {/* Search and Filter Bar */}
         <div className="mb-4 flex flex-col gap-3">
           <div className="relative w-full">
