@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Loader2, Search, SlidersHorizontal, MapPin } from "lucide-react";
+import { Star, Loader2, Search, SlidersHorizontal, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ROUTES } from "@/constants/routes";
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 const LOCATION_PROMPTED_KEY = 'gyms_location_prompted';
 
