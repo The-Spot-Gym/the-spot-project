@@ -17,6 +17,7 @@ import type { WorkoutSession, WorkoutExercise } from "@/types";
 interface RecentWorkoutsProps {
   workouts: WorkoutSession[];
   onWorkoutDeleted?: () => void;
+  initialLimit?: number;
 }
 
 interface WorkoutItemProps {
