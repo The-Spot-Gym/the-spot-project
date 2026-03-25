@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Loader2, Search, SlidersHorizontal, MapPin } from "lucide-react";
+import { Star, Loader2, Search, SlidersHorizontal, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ROUTES } from "@/constants/routes";
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 const LOCATION_PROMPTED_KEY = 'gyms_location_prompted';
 
@@ -31,6 +32,7 @@ const GymsNearYou = () => {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [locationLoading, setLocationLoading] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [customAddress, setCustomAddress] = useState<string | null>(null);
   const [hasPromptedBefore, setHasPromptedBefore] = useState(() => {
     return localStorage.getItem(LOCATION_PROMPTED_KEY) === 'true';
   });
@@ -103,6 +105,15 @@ const GymsNearYou = () => {
     } finally {
       setLocationLoading(false);
     }
+  };
+
+  // Handle address selection from autocomplete
+  const handleAddressSelect = (location: { latitude: number; longitude: number; address: string }) => {
+    setCustomAddress(location.address);
+    setUserLocation({ latitude: location.latitude, longitude: location.longitude });
+    setGyms([]); // Clear old gyms so useEffect triggers fetch
+    setPermissionDenied(false);
+    setErrorMessage(null);
   };
 
   // Fetch gyms when location becomes available
@@ -283,6 +294,33 @@ const GymsNearYou = () => {
           <p className="text-muted-foreground">Discover your perfect fitness community</p>
         </div>
 
+        {/* Address Search */}
+        <div className="mb-4">
+          <AddressAutocomplete onLocationSelect={handleAddressSelect} />
+        </div>
+
+        {customAddress && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">Showing gyms near: <span className="font-medium text-foreground">{customAddress}</span></span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto flex-shrink-0 h-6 px-2 text-xs"
+              onClick={() => {
+                setCustomAddress(null);
+                if (hasPromptedBefore) {
+                  setUserLocation(null);
+                  setGyms([]);
+                  requestLocation();
+                }
+              }}
+            >
+              Use my location
+            </Button>
+          </div>
+        )}
+
         {/* Search and Filter Bar */}
         <div className="mb-4 flex flex-col gap-3">
           <div className="relative w-full">
@@ -324,11 +362,11 @@ const GymsNearYou = () => {
             <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">Find Gyms Near You</h3>
             <p className="text-muted-foreground mb-4">
-              Allow location access to discover fitness centers in your area
+              Use your current location or search any address
             </p>
             <Button onClick={requestLocation} variant="fitness" size="lg">
-              <MapPin className="w-4 h-4 mr-2" />
-              Enable Location
+              <Navigation className="w-4 h-4 mr-2" />
+              Use My Location
             </Button>
           </Card>
         )}
