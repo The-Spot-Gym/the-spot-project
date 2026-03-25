@@ -32,6 +32,7 @@ const GymsNearYou = () => {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [locationLoading, setLocationLoading] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [customAddress, setCustomAddress] = useState<string | null>(null);
   const [hasPromptedBefore, setHasPromptedBefore] = useState(() => {
     return localStorage.getItem(LOCATION_PROMPTED_KEY) === 'true';
   });
