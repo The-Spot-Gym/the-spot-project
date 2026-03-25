@@ -96,54 +96,12 @@ export default function WorkoutPlans() {
       ) : (
         <div className="grid gap-4">
           {plans.map((plan) => (
-            <Card key={plan.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{plan.name}</CardTitle>
-                    {plan.description && (
-                      <CardDescription className="mt-1">{plan.description}</CardDescription>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingPlan(plan)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeletingPlanId(plan.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {plan.exercises.length} exercise{plan.exercises.length !== 1 ? 's' : ''}
-                  </p>
-                  {plan.exercises.slice(0, 3).map((exercise) => (
-                    <div key={exercise.id} className="text-sm">
-                      <span className="font-medium">{exercise.exercise_name}</span>
-                      <span className="text-muted-foreground ml-2">
-                        {exercise.sets} × {exercise.reps} @ {exercise.weight} lbs
-                      </span>
-                    </div>
-                  ))}
-                  {plan.exercises.length > 3 && (
-                    <p className="text-sm text-muted-foreground">
-                      +{plan.exercises.length - 3} more exercise{plan.exercises.length - 3 !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              onEdit={() => setEditingPlan(plan)}
+              onDelete={() => setDeletingPlanId(plan.id)}
+            />
           ))}
         </div>
       )}
