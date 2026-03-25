@@ -17,6 +17,7 @@ import type { WorkoutSession, WorkoutExercise } from "@/types";
 interface RecentWorkoutsProps {
   workouts: WorkoutSession[];
   onWorkoutDeleted?: () => void;
+  initialLimit?: number;
 }
 
 interface WorkoutItemProps {
@@ -226,7 +227,37 @@ const WorkoutItem = ({ workout, onDeleted }: WorkoutItemProps) => {
   );
 };
 
-export const RecentWorkouts = ({ workouts, onWorkoutDeleted }: RecentWorkoutsProps) => {
+export const RecentWorkouts = ({ workouts, onWorkoutDeleted, initialLimit = 5 }: RecentWorkoutsProps) => {
+  const [showAll, setShowAll] = useState(false);
+  const [allWorkouts, setAllWorkouts] = useState<WorkoutSession[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
+
+  const displayedWorkouts = showAll && allWorkouts.length > 0 ? allWorkouts : workouts;
+  const hasMore = !showAll && workouts.length >= initialLimit;
+
+  const handleShowAll = async () => {
+    if (allWorkouts.length > 0) {
+      setShowAll(true);
+      return;
+    }
+    setLoadingAll(true);
+    try {
+      const data = await workoutService.getRecentSessions(100);
+      setAllWorkouts(data);
+      setShowAll(true);
+    } catch {
+      console.error('Failed to load all workouts');
+    } finally {
+      setLoadingAll(false);
+    }
+  };
+
+  const handleDeleted = () => {
+    setShowAll(false);
+    setAllWorkouts([]);
+    onWorkoutDeleted?.();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -242,9 +273,31 @@ export const RecentWorkouts = ({ workouts, onWorkoutDeleted }: RecentWorkoutsPro
           />
         ) : (
           <div className="space-y-3">
-            {workouts.map((workout) => (
-              <WorkoutItem key={workout.id} workout={workout} onDeleted={onWorkoutDeleted} />
+            {displayedWorkouts.map((workout) => (
+              <WorkoutItem key={workout.id} workout={workout} onDeleted={handleDeleted} />
             ))}
+            {hasMore && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleShowAll}
+                disabled={loadingAll}
+              >
+                {loadingAll ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Show All Workouts
+              </Button>
+            )}
+            {showAll && allWorkouts.length > initialLimit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => setShowAll(false)}
+              >
+                Show Less
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
