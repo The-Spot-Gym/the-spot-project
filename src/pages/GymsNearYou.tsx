@@ -362,11 +362,11 @@ const GymsNearYou = () => {
             <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">Find Gyms Near You</h3>
             <p className="text-muted-foreground mb-4">
-              Allow location access to discover fitness centers in your area
+              Use your current location or search any address
             </p>
             <Button onClick={requestLocation} variant="fitness" size="lg">
-              <MapPin className="w-4 h-4 mr-2" />
-              Enable Location
+              <Navigation className="w-4 h-4 mr-2" />
+              Use My Location
             </Button>
           </Card>
         )}
