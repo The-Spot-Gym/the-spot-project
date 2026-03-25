@@ -107,6 +107,15 @@ const GymsNearYou = () => {
     }
   };
 
+  // Handle address selection from autocomplete
+  const handleAddressSelect = (location: { latitude: number; longitude: number; address: string }) => {
+    setCustomAddress(location.address);
+    setUserLocation({ latitude: location.latitude, longitude: location.longitude });
+    setGyms([]); // Clear old gyms so useEffect triggers fetch
+    setPermissionDenied(false);
+    setErrorMessage(null);
+  };
+
   // Fetch gyms when location becomes available
   useEffect(() => {
     if (userLocation && gyms.length === 0) {
