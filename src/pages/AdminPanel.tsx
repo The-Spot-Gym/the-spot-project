@@ -39,7 +39,6 @@ const AdminPanel = () => {
 
   // Create manager form
   const [managerEmail, setManagerEmail] = useState('');
-  const [managerPassword, setManagerPassword] = useState('');
   const [managerGymId, setManagerGymId] = useState('');
 
   const fetchGyms = async () => {
@@ -92,52 +91,59 @@ const AdminPanel = () => {
   };
 
   const handleCreateManager = async () => {
-    if (!managerEmail || !managerPassword || !managerGymId) {
-      toast({ title: "Error", description: "All fields are required", variant: "destructive" });
+    if (!managerEmail || !managerGymId) {
+      toast({ title: "Error", description: "Email and gym are required", variant: "destructive" });
       return;
     }
 
-    // Create the user account via Supabase Auth (sign up)
-    // We'll use the admin function to create account + assign role
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: managerEmail,
-      password: managerPassword,
+    // Look up user by email via profiles table joined with auth
+    const { data: profileData, error: profileError } = await fromTable('profiles')
+      .select('user_id')
+      .limit(1000) as any;
+
+    if (profileError) {
+      toast({ title: "Error", description: "Failed to search for user", variant: "destructive" });
+      return;
+    }
+
+    // We need to find the user by email - query auth users via a different approach
+    // Use supabase rpc or direct lookup. Since we can't query auth.users from client,
+    // we'll look up by checking if there's a matching profile after sign-in attempt
+    const { data: userData, error: userError } = await supabase.rpc('get_user_id_by_email' as any, {
+      _email: managerEmail,
     });
 
-    if (signUpError) {
-      toast({ title: "Error creating account", description: signUpError.message, variant: "destructive" });
+    if (userError || !userData) {
+      toast({ title: "User not found", description: "No account found with that email. They need to create an account in the app first.", variant: "destructive" });
       return;
     }
 
-    if (!signUpData.user) {
-      toast({ title: "Error", description: "Failed to create user", variant: "destructive" });
-      return;
-    }
+    const userId = userData as string;
 
-    // Assign gym_owner role
+    // Assign gym_owner role (ignore if already exists)
     const { error: roleError } = await fromTable('user_roles').insert({
-      user_id: signUpData.user.id,
+      user_id: userId,
       role: 'gym_owner',
     } as any);
 
-    if (roleError) {
+    if (roleError && !roleError.message.includes('duplicate')) {
       console.error('Role assignment error:', roleError);
     }
 
     // Assign as gym manager
     const { error: mgrError } = await fromTable('partnered_gym_managers').insert({
       gym_id: managerGymId,
-      user_id: signUpData.user.id,
+      user_id: userId,
     } as any);
 
     if (mgrError) {
-      console.error('Manager assignment error:', mgrError);
+      toast({ title: "Error", description: mgrError.message.includes('duplicate') ? "This user is already a manager of this gym." : mgrError.message, variant: "destructive" });
+      return;
     }
 
-    toast({ title: "Manager Created", description: `Account created for ${managerEmail} and assigned to gym.` });
+    toast({ title: "Manager Assigned", description: `${managerEmail} has been assigned as a gym manager.` });
     setShowCreateManager(false);
     setManagerEmail('');
-    setManagerPassword('');
     setManagerGymId('');
   };
 
@@ -253,10 +259,10 @@ const AdminPanel = () => {
                   <Button><Plus className="w-4 h-4 mr-2" /> Create Manager</Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Create Gym Manager Account</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Assign Gym Manager</DialogTitle></DialogHeader>
                   <div className="space-y-4">
-                    <div><Label>Email *</Label><Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} /></div>
-                    <div><Label>Password *</Label><Input type="password" value={managerPassword} onChange={e => setManagerPassword(e.target.value)} /></div>
+                    <p className="text-sm text-muted-foreground">The user must have already created an account in the app.</p>
+                    <div><Label>User Email *</Label><Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} placeholder="manager@example.com" /></div>
                     <div>
                       <Label>Assign to Gym *</Label>
                       <Select value={managerGymId} onValueChange={setManagerGymId}>
@@ -266,7 +272,7 @@ const AdminPanel = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={handleCreateManager} className="w-full">Create Account & Assign</Button>
+                    <Button onClick={handleCreateManager} className="w-full">Assign Manager</Button>
                   </div>
                 </DialogContent>
               </Dialog>
