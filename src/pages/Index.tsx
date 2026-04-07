@@ -16,6 +16,7 @@ import { ROUTES } from "@/constants/routes";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { useWorkoutLogger } from "@/hooks/useWorkoutLogger";
 import { RecentWorkouts } from "@/components/workout/RecentWorkouts";
+import { RestTimer } from "@/components/workout/RestTimer";
 import { LoadingState } from "@/components/LoadingState";
 import Welcome from "./Welcome";
 import type { WorkoutSession, LeaderboardStats } from "@/types";
@@ -237,6 +238,8 @@ const Index = () => {
                 Complete Workout {exercisesInSession.length > 0 && `(${exercisesInSession.length})`}
               </Button>
             </div>
+
+            <RestTimer />
           </div>
         )}
 
