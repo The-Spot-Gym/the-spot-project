@@ -372,6 +372,303 @@ export type Database = {
           },
         ]
       }
+      partnered_gym_announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          gym_id: string
+          id: string
+          is_pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          gym_id: string
+          id?: string
+          is_pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          gym_id?: string
+          id?: string
+          is_pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_announcements_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gym_classes: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          description: string | null
+          end_time: string
+          gym_id: string
+          id: string
+          instructor: string | null
+          is_mma: boolean
+          max_capacity: number | null
+          name: string
+          registration_url: string | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          description?: string | null
+          end_time: string
+          gym_id: string
+          id?: string
+          instructor?: string | null
+          is_mma?: boolean
+          max_capacity?: number | null
+          name: string
+          registration_url?: string | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          description?: string | null
+          end_time?: string
+          gym_id?: string
+          id?: string
+          instructor?: string | null
+          is_mma?: boolean
+          max_capacity?: number | null
+          name?: string
+          registration_url?: string | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_classes_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gym_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          display_order: number
+          gym_id: string
+          id: string
+          image_url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number
+          gym_id: string
+          id?: string
+          image_url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number
+          gym_id?: string
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_images_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gym_locations: {
+        Row: {
+          address: string
+          created_at: string
+          gym_id: string
+          hours: Json | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          gym_id: string
+          hours?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          gym_id?: string
+          hours?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_locations_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gym_managers: {
+        Row: {
+          created_at: string
+          gym_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_managers_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gym_memberships: {
+        Row: {
+          created_at: string
+          gym_id: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnered_gym_memberships_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "partnered_gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnered_gyms: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          mma_description: string | null
+          mma_enabled: boolean
+          mma_webpage_url: string | null
+          name: string
+          social_links: Json | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          mma_description?: string | null
+          mma_enabled?: boolean
+          mma_webpage_url?: string | null
+          name: string
+          social_links?: Json | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          mma_description?: string | null
+          mma_enabled?: boolean
+          mma_webpage_url?: string | null
+          name?: string
+          social_links?: Json | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -405,6 +702,27 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -570,6 +888,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_admin_by_email: { Args: { _email: string }; Returns: undefined }
       get_comprehensive_friend_recommendations: {
         Args: { current_user_id: string; limit_count?: number }
         Returns: {
@@ -604,11 +923,22 @@ export type Database = {
           username: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
       is_gym_member: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_partnered_gym_manager: {
         Args: { _gym_id: string; _user_id: string }
         Returns: boolean
       }
@@ -618,7 +948,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "gym_owner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -745,6 +1075,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "gym_owner"],
+    },
   },
 } as const
