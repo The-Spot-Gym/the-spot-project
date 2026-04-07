@@ -220,27 +220,25 @@ const AdminPanel = () => {
 
             {loading ? <LoadingState message="Loading gyms..." /> : gyms.map(gym => (
               <Card key={gym.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {gym.image_url ? (
-                        <img src={gym.image_url} alt={gym.name} className="w-16 h-16 rounded-lg object-cover" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-2xl">🏋️</div>
-                      )}
-                      <h3 className="font-semibold text-lg">{gym.name}</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/admin/partnered-gym/${gym.id}`)}>
-                        <Edit className="w-4 h-4 mr-1" /> Manage
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/partnered-gym/${gym.id}`)}>
-                        View Page
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteGym(gym.id, gym.name)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                <CardContent className="pt-4 pb-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    {gym.image_url ? (
+                      <img src={gym.image_url} alt={gym.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-lg shrink-0">🏋️</div>
+                    )}
+                    <h3 className="font-semibold truncate">{gym.name}</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => navigate(`/admin/partnered-gym/${gym.id}`)}>
+                      <Edit className="w-3.5 h-3.5 mr-1" /> Manage
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => navigate(`/partnered-gym/${gym.id}`)}>
+                      View
+                    </Button>
+                    <Button variant="destructive" size="sm" className="text-xs" onClick={() => handleDeleteGym(gym.id, gym.name)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
