@@ -27,6 +27,9 @@ import MyFriends from "./pages/MyFriends";
 import WorkoutPlans from "./pages/WorkoutPlans";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import AdminPanel from "./pages/AdminPanel";
+import AdminGymManage from "./pages/AdminGymManage";
+import PartneredGymPage from "./pages/PartneredGymPage";
 
 const AppContent = () => {
   usePushNotifications();
@@ -98,6 +101,9 @@ const AppContent = () => {
         <Route path="/my-friends" element={<MyFriends />} />
         <Route path="/workout-plans" element={<WorkoutPlans />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/partnered-gym/:gymId" element={<AdminGymManage />} />
+        <Route path="/partnered-gym/:gymId" element={<PartneredGymPage />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
