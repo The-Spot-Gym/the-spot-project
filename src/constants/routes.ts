@@ -14,4 +14,7 @@ export const ROUTES = {
   FRIEND_RECOMMENDATIONS: '/friend-recommendations',
   WORKOUT_PLANS: '/workout-plans',
   MY_FRIENDS: '/my-friends',
+  ADMIN_PANEL: '/admin',
+  ADMIN_GYM_MANAGE: (gymId: string) => `/admin/partnered-gym/${gymId}`,
+  PARTNERED_GYM: (gymId: string) => `/partnered-gym/${gymId}`,
 } as const;

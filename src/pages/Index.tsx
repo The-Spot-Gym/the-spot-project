@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Flame, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { MapPin, Flame, TrendingUp, Calendar, Dumbbell, MessageCircle, UserPlus, Users, User, Settings as SettingsIcon, LogOut, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +19,8 @@ import { RecentWorkouts } from "@/components/workout/RecentWorkouts";
 import { LoadingState } from "@/components/LoadingState";
 import Welcome from "./Welcome";
 import type { WorkoutSession, LeaderboardStats } from "@/types";
+import { useAdminRole } from "@/hooks/useAdminRole";
+import { usePartneredGyms } from "@/hooks/usePartneredGym";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -26,6 +29,8 @@ const Index = () => {
   const { unreadMessages, pendingFriendRequests } = useNotificationCounts();
   const [streakData, setStreakData] = useState<LeaderboardStats | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutSession[]>([]);
+  const { isAdmin } = useAdminRole();
+  const { gyms: partneredGyms } = usePartneredGyms();
 
   const {
     currentExercise,
@@ -228,6 +233,15 @@ const Index = () => {
                       <SettingsIcon className="mr-2 h-4 w-4" />
                       Settings
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => navigate(ROUTES.ADMIN_PANEL)}>
+                          <Shield className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
@@ -259,6 +273,35 @@ const Index = () => {
             Find Gyms Near You
           </Button>
         </div>
+
+        {/* Partnered Gyms */}
+        {partneredGyms.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Star className="w-5 h-5 text-primary" /> Partner Gyms
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {partneredGyms.map(gym => (
+                <Card key={gym.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(ROUTES.PARTNERED_GYM(gym.id))}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    {gym.image_url ? (
+                      <img src={gym.image_url} alt={gym.name} className="w-14 h-14 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center text-xl">🏋️</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold truncate">{gym.name}</h3>
+                        <Badge variant="secondary" className="text-[10px] shrink-0">Partner</Badge>
+                      </div>
+                      {gym.description && <p className="text-sm text-muted-foreground truncate">{gym.description}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Streak Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
