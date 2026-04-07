@@ -228,10 +228,7 @@ const AdminPanel = () => {
                       ) : (
                         <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-2xl">🏋️</div>
                       )}
-                      <div>
-                        <h3 className="font-semibold text-lg">{gym.name}</h3>
-                        <p className="text-sm text-muted-foreground">{gym.description?.substring(0, 100) || 'No description'}</p>
-                      </div>
+                      <h3 className="font-semibold text-lg">{gym.name}</h3>
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => navigate(`/admin/partnered-gym/${gym.id}`)}>
