@@ -1,8 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { Capacitor } from "@capacitor/core";
 
 const PRESETS = [30, 60, 90, 120, 180];
+
+const scheduleTimerNotification = async (seconds: number) => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const perms = await LocalNotifications.requestPermissions();
+    if (perms.display !== "granted") return;
+    // Cancel any previous timer notification
+    await LocalNotifications.cancel({ notifications: [{ id: 9999 }] });
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: 9999,
+          title: "Rest Over! 💪",
+          body: "Time to get back to your next set!",
+          schedule: { at: new Date(Date.now() + seconds * 1000) },
+          sound: "default",
+        },
+      ],
+    });
+  } catch (e) {
+    console.warn("Local notification error:", e);
+  }
+};
+
+const cancelTimerNotification = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: 9999 }] });
+  } catch {}
+};
 
 export const RestTimer = () => {
   const [duration, setDuration] = useState(60);
@@ -44,18 +76,27 @@ export const RestTimer = () => {
     if (timeLeft === 0) {
       setTimeLeft(duration);
     }
-    setRunning((r) => !r);
+    const willRun = !running;
+    setRunning(willRun);
+    if (willRun) {
+      const secsLeft = timeLeft === 0 ? duration : timeLeft;
+      scheduleTimerNotification(secsLeft);
+    } else {
+      cancelTimerNotification();
+    }
   };
 
   const reset = () => {
     setRunning(false);
     setTimeLeft(duration);
+    cancelTimerNotification();
   };
 
   const selectPreset = (secs: number) => {
     setDuration(secs);
     setTimeLeft(secs);
     setRunning(false);
+    cancelTimerNotification();
   };
 
   const progress = duration > 0 ? ((duration - timeLeft) / duration) * 100 : 0;
@@ -86,7 +127,6 @@ export const RestTimer = () => {
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="relative h-1.5 bg-muted rounded-full overflow-hidden">
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${
