@@ -80,6 +80,30 @@ const AdminGymManage = () => {
     </div>
   );
 
+  const handleSaveOverview = async () => {
+    const social_links: Record<string, string> = {};
+    if (overviewForm.social_instagram) social_links.instagram = overviewForm.social_instagram;
+    if (overviewForm.social_facebook) social_links.facebook = overviewForm.social_facebook;
+    if (overviewForm.social_twitter) social_links.twitter = overviewForm.social_twitter;
+    if (overviewForm.social_tiktok) social_links.tiktok = overviewForm.social_tiktok;
+
+    const { error } = await fromTable('partnered_gyms').update({
+      name: overviewForm.name,
+      description: overviewForm.description || null,
+      image_url: overviewForm.image_url || null,
+      website: overviewForm.website || null,
+      contact_email: overviewForm.contact_email || null,
+      contact_phone: overviewForm.contact_phone || null,
+      mma_enabled: overviewForm.mma_enabled,
+      mma_webpage_url: overviewForm.mma_webpage_url || null,
+      mma_description: overviewForm.mma_description || null,
+      social_links,
+    } as any).eq('id', gymId);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Overview Updated" });
+    refetch();
+  };
+
   const handleAddClass = async () => {
     const { error } = await fromTable('partnered_gym_classes').insert({
       gym_id: gymId,
