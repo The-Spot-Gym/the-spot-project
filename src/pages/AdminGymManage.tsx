@@ -69,6 +69,8 @@ const AdminGymManage = () => {
   // Edit class
   const [editingClass, setEditingClass] = useState<PartneredGymClass | null>(null);
   const [editClassForm, setEditClassForm] = useState({ name: '', description: '', day_of_week: '1', start_time: '09:00', end_time: '10:00', instructor: '', is_mma: false, registration_url: '', max_capacity: '' });
+  // Location autofill
+  const [autofillLoading, setAutofillLoading] = useState(false);
 
   if (roleLoading || loading) return <LoadingState message="Loading..." fullScreen />;
   if (!isManager) return (
