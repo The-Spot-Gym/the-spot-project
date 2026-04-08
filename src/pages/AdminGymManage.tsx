@@ -242,7 +242,7 @@ const AdminGymManage = () => {
 
         const { error } = await fromTable('partnered_gym_locations').insert({
           gym_id: gymId,
-          name: prediction.mainText || gym.name,
+          name: prediction.secondaryText || prediction.mainText || gym.name,
           address,
           latitude: geoData?.latitude || null,
           longitude: geoData?.longitude || null,
