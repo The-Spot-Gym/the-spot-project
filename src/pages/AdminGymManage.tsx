@@ -214,6 +214,54 @@ const AdminGymManage = () => {
     refetch();
   };
 
+  const handleAutofillLocations = async () => {
+    if (!gym?.name) return;
+    setAutofillLoading(true);
+    try {
+      // Search for the gym name via place-autocomplete
+      const { data: searchData, error: searchError } = await supabase.functions.invoke('place-autocomplete', {
+        body: { action: 'autocomplete', input: gym.name },
+      });
+      if (searchError || !searchData?.predictions?.length) {
+        toast({ title: "No Results", description: "No locations found for this gym name on Google Maps.", variant: "destructive" });
+        setAutofillLoading(false);
+        return;
+      }
+
+      const existingAddresses = new Set(locations.map(l => l.address.toLowerCase()));
+      let added = 0;
+
+      for (const prediction of searchData.predictions) {
+        // Geocode each prediction to get lat/lng
+        const { data: geoData } = await supabase.functions.invoke('place-autocomplete', {
+          body: { action: 'geocode', placeId: prediction.placeId },
+        });
+
+        const address = geoData?.formattedAddress || prediction.description;
+        if (existingAddresses.has(address.toLowerCase())) continue;
+
+        const { error } = await fromTable('partnered_gym_locations').insert({
+          gym_id: gymId,
+          name: prediction.mainText || gym.name,
+          address,
+          latitude: geoData?.latitude || null,
+          longitude: geoData?.longitude || null,
+        } as any);
+
+        if (!error) {
+          added++;
+          existingAddresses.add(address.toLowerCase());
+        }
+      }
+
+      toast({ title: added > 0 ? "Locations Added" : "No New Locations", description: added > 0 ? `${added} location(s) added from Google Maps.` : "All found locations already exist." });
+      if (added > 0) refetch();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to fetch locations from Google Maps.", variant: "destructive" });
+    }
+    setAutofillLoading(false);
+  };
+
   const formatTime = (t: string) => {
     const [h, m] = t.split(':');
     const hour = parseInt(h);
