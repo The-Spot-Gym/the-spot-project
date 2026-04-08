@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { usePartneredGymDetail } from "@/hooks/usePartneredGym";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { DAY_NAMES } from "@/types/partneredGym";
+import { DAY_NAMES, type PartneredGymClass } from "@/types/partneredGym";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const fromTable = (table: string) => supabase.from(table as any);
 
@@ -33,6 +34,9 @@ const AdminGymManage = () => {
   const [imgForm, setImgForm] = useState({ image_url: '', caption: '' });
   // Location form
   const [locForm, setLocForm] = useState({ name: '', address: '', phone: '' });
+  // Edit class
+  const [editingClass, setEditingClass] = useState<PartneredGymClass | null>(null);
+  const [editClassForm, setEditClassForm] = useState({ name: '', description: '', day_of_week: '1', start_time: '09:00', end_time: '10:00', instructor: '', is_mma: false, registration_url: '', max_capacity: '' });
 
   if (roleLoading || loading) return <LoadingState message="Loading..." fullScreen />;
   if (!isManager) return (
@@ -66,6 +70,40 @@ const AdminGymManage = () => {
   const handleDeleteClass = async (id: string) => {
     await fromTable('partnered_gym_classes').delete().eq('id', id);
     toast({ title: "Class Deleted" });
+    refetch();
+  };
+
+  const openEditClass = (c: PartneredGymClass) => {
+    setEditingClass(c);
+    setEditClassForm({
+      name: c.name,
+      description: c.description || '',
+      day_of_week: String(c.day_of_week),
+      start_time: c.start_time,
+      end_time: c.end_time,
+      instructor: c.instructor || '',
+      is_mma: c.is_mma,
+      registration_url: c.registration_url || '',
+      max_capacity: c.max_capacity ? String(c.max_capacity) : '',
+    });
+  };
+
+  const handleUpdateClass = async () => {
+    if (!editingClass) return;
+    const { error } = await fromTable('partnered_gym_classes').update({
+      name: editClassForm.name,
+      description: editClassForm.description || null,
+      day_of_week: parseInt(editClassForm.day_of_week),
+      start_time: editClassForm.start_time,
+      end_time: editClassForm.end_time,
+      instructor: editClassForm.instructor || null,
+      is_mma: editClassForm.is_mma,
+      registration_url: editClassForm.registration_url || null,
+      max_capacity: editClassForm.max_capacity ? parseInt(editClassForm.max_capacity) : null,
+    } as any).eq('id', editingClass.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Class Updated" });
+    setEditingClass(null);
     refetch();
   };
 
@@ -189,7 +227,10 @@ const AdminGymManage = () => {
                       <p className="font-medium">{c.name} {c.is_mma && '🥊'}</p>
                       <p className="text-sm text-muted-foreground">{DAY_NAMES[c.day_of_week]} {formatTime(c.start_time)} - {formatTime(c.end_time)}</p>
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteClass(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openEditClass(c)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteClass(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
                   </div>
                 ))}
                 {classes.length === 0 && <p className="text-muted-foreground">No classes added yet.</p>}
@@ -279,6 +320,42 @@ const AdminGymManage = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Class Dialog */}
+      <Dialog open={!!editingClass} onOpenChange={open => !open && setEditingClass(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Edit Class</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Name *</Label><Input value={editClassForm.name} onChange={e => setEditClassForm(p => ({...p, name: e.target.value}))} /></div>
+              <div><Label>Instructor</Label><Input value={editClassForm.instructor} onChange={e => setEditClassForm(p => ({...p, instructor: e.target.value}))} /></div>
+            </div>
+            <div><Label>Description</Label><Textarea value={editClassForm.description} onChange={e => setEditClassForm(p => ({...p, description: e.target.value}))} /></div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Day</Label>
+                <Select value={editClassForm.day_of_week} onValueChange={v => setEditClassForm(p => ({...p, day_of_week: v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DAY_NAMES.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Start</Label><Input type="time" value={editClassForm.start_time} onChange={e => setEditClassForm(p => ({...p, start_time: e.target.value}))} /></div>
+              <div><Label>End</Label><Input type="time" value={editClassForm.end_time} onChange={e => setEditClassForm(p => ({...p, end_time: e.target.value}))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Registration URL</Label><Input value={editClassForm.registration_url} onChange={e => setEditClassForm(p => ({...p, registration_url: e.target.value}))} /></div>
+              <div><Label>Max Capacity</Label><Input type="number" value={editClassForm.max_capacity} onChange={e => setEditClassForm(p => ({...p, max_capacity: e.target.value}))} /></div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={editClassForm.is_mma} onCheckedChange={v => setEditClassForm(p => ({...p, is_mma: v}))} />
+              <Label>MMA Class</Label>
+            </div>
+            <Button onClick={handleUpdateClass} disabled={!editClassForm.name} className="w-full"><Save className="w-4 h-4 mr-1" /> Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
