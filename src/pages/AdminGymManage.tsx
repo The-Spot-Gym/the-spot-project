@@ -464,7 +464,22 @@ const AdminGymManage = () => {
           {/* Locations */}
           <TabsContent value="locations" className="mt-6 space-y-4">
             <Card>
-              <CardHeader><CardTitle>Add Location</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Auto-Fill from Google Maps</CardTitle>
+                  <Button onClick={handleAutofillLocations} disabled={autofillLoading} variant="outline">
+                    {autofillLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MapPin className="w-4 h-4 mr-1" />}
+                    {autofillLoading ? 'Searching...' : 'Fetch Locations'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Searches Google Maps for "{gym?.name}" and adds matching locations automatically. Duplicates are skipped.</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Add Location Manually</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div><Label>Location Name *</Label><Input value={locForm.name} onChange={e => setLocForm(p => ({...p, name: e.target.value}))} /></div>
                 <div><Label>Address *</Label><Input value={locForm.address} onChange={e => setLocForm(p => ({...p, address: e.target.value}))} /></div>
