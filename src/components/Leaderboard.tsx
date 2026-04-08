@@ -14,17 +14,19 @@ interface LeaderboardProps {
   gymName: string;
   hasJoined?: boolean;
   onJoinGym?: () => void;
+  partnered?: boolean;
 }
 
-const Leaderboard = ({ gymId, gymName, hasJoined, onJoinGym }: LeaderboardProps) => {
+const Leaderboard = ({ gymId, gymName, hasJoined, onJoinGym, partnered = false }: LeaderboardProps) => {
   const { user } = useAuth();
   const [benchData, setBenchData] = useState<LeaderboardEntry[]>([]);
   const [squatData, setSquatData] = useState<LeaderboardEntry[]>([]);
   const [deadliftData, setDeadliftData] = useState<LeaderboardEntry[]>([]);
 
   const fetchLeaderboardData = async () => {
+    const rpcName = partnered ? 'get_partnered_gym_leaderboard' : 'get_gym_leaderboard';
     const { data, error } = await supabase
-      .rpc('get_gym_leaderboard', { _gym_id: gymId });
+      .rpc(rpcName as any, { _gym_id: gymId });
 
     if (error) {
       console.error('Error fetching leaderboard:', error);

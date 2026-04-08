@@ -923,6 +923,16 @@ export type Database = {
           username: string
         }[]
       }
+      get_partnered_gym_leaderboard: {
+        Args: { _gym_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          personal_records: Json
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

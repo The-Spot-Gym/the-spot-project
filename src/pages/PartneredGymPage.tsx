@@ -301,19 +301,13 @@ const PartneredGymPage = () => {
 
           {/* Leaderboard */}
           <TabsContent value="leaderboard" className="mt-6">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-sm mb-4">Leaderboard shows stats for members of this partnered gym.</p>
-                {isMember ? (
-                  <p className="text-muted-foreground">Leaderboard coming soon for partnered gyms.</p>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">Join this gym to see the leaderboard</p>
-                    <Button variant="fitness" onClick={joinGym}>Join {gym.name}</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <Leaderboard
+              gymId={gym.id}
+              gymName={gym.name}
+              hasJoined={isMember}
+              onJoinGym={joinGym}
+              partnered
+            />
           </TabsContent>
 
           {/* Contact */}
