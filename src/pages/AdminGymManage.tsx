@@ -231,13 +231,77 @@ const AdminGymManage = () => {
       </header>
 
       <div className="max-w-4xl mx-auto p-4">
-        <Tabs defaultValue="classes">
+        <Tabs defaultValue="overview">
           <TabsList className="w-full flex overflow-x-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="classes">Classes</TabsTrigger>
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="images">Images</TabsTrigger>
             <TabsTrigger value="locations">Locations</TabsTrigger>
           </TabsList>
+
+          {/* Overview */}
+          <TabsContent value="overview" className="mt-6 space-y-4">
+            <Card>
+              <CardHeader><CardTitle>Gym Info</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div><Label>Gym Name *</Label><Input value={overviewForm.name} onChange={e => setOverviewForm(p => ({...p, name: e.target.value}))} /></div>
+                <div><Label>Description</Label><Textarea value={overviewForm.description} onChange={e => setOverviewForm(p => ({...p, description: e.target.value}))} rows={4} /></div>
+                <div>
+                  <Label>Main Image URL</Label>
+                  <Input value={overviewForm.image_url} onChange={e => setOverviewForm(p => ({...p, image_url: e.target.value}))} placeholder="https://..." />
+                  {overviewForm.image_url && (
+                    <div className="mt-2 rounded-lg overflow-hidden h-32 w-full">
+                      <img src={overviewForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+                <div><Label>Website</Label><Input value={overviewForm.website} onChange={e => setOverviewForm(p => ({...p, website: e.target.value}))} placeholder="https://..." /></div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Email</Label><Input type="email" value={overviewForm.contact_email} onChange={e => setOverviewForm(p => ({...p, contact_email: e.target.value}))} /></div>
+                  <div><Label>Phone</Label><Input value={overviewForm.contact_phone} onChange={e => setOverviewForm(p => ({...p, contact_phone: e.target.value}))} /></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Social Links</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Instagram</Label><Input value={overviewForm.social_instagram} onChange={e => setOverviewForm(p => ({...p, social_instagram: e.target.value}))} placeholder="https://instagram.com/..." /></div>
+                  <div><Label>Facebook</Label><Input value={overviewForm.social_facebook} onChange={e => setOverviewForm(p => ({...p, social_facebook: e.target.value}))} placeholder="https://facebook.com/..." /></div>
+                  <div><Label>Twitter / X</Label><Input value={overviewForm.social_twitter} onChange={e => setOverviewForm(p => ({...p, social_twitter: e.target.value}))} placeholder="https://x.com/..." /></div>
+                  <div><Label>TikTok</Label><Input value={overviewForm.social_tiktok} onChange={e => setOverviewForm(p => ({...p, social_tiktok: e.target.value}))} placeholder="https://tiktok.com/@..." /></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>MMA Settings</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Switch checked={overviewForm.mma_enabled} onCheckedChange={v => setOverviewForm(p => ({...p, mma_enabled: v}))} />
+                  <Label>Enable MMA Section</Label>
+                </div>
+                {overviewForm.mma_enabled && (
+                  <>
+                    <div><Label>MMA Webpage URL</Label><Input value={overviewForm.mma_webpage_url} onChange={e => setOverviewForm(p => ({...p, mma_webpage_url: e.target.value}))} /></div>
+                    <div><Label>MMA Description</Label><Textarea value={overviewForm.mma_description} onChange={e => setOverviewForm(p => ({...p, mma_description: e.target.value}))} /></div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Button onClick={handleSaveOverview} disabled={!overviewForm.name} className="w-full">
+              <Save className="w-4 h-4 mr-1" /> Save Overview
+            </Button>
+          </TabsContent>
 
           {/* Classes */}
           <TabsContent value="classes" className="mt-6 space-y-4">
