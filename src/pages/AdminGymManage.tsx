@@ -26,6 +26,38 @@ const AdminGymManage = () => {
   const { isAdmin, loading: roleLoading } = useAdminRole();
   const { gym, classes, announcements, images, locations, loading, isManager, refetch } = usePartneredGymDetail(gymId || null);
 
+  // Overview form
+  const [overviewForm, setOverviewForm] = useState({
+    name: '', description: '', image_url: '', website: '',
+    contact_email: '', contact_phone: '',
+    mma_enabled: false, mma_webpage_url: '', mma_description: '',
+    social_instagram: '', social_facebook: '', social_twitter: '', social_tiktok: '',
+  });
+  const [overviewLoaded, setOverviewLoaded] = useState(false);
+
+  // Load overview form from gym data
+  useEffect(() => {
+    if (gym && !overviewLoaded) {
+      const sl = (gym.social_links || {}) as Record<string, string>;
+      setOverviewForm({
+        name: gym.name || '',
+        description: gym.description || '',
+        image_url: gym.image_url || '',
+        website: gym.website || '',
+        contact_email: gym.contact_email || '',
+        contact_phone: gym.contact_phone || '',
+        mma_enabled: gym.mma_enabled || false,
+        mma_webpage_url: gym.mma_webpage_url || '',
+        mma_description: gym.mma_description || '',
+        social_instagram: sl.instagram || '',
+        social_facebook: sl.facebook || '',
+        social_twitter: sl.twitter || '',
+        social_tiktok: sl.tiktok || '',
+      });
+      setOverviewLoaded(true);
+    }
+  }, [gym, overviewLoaded]);
+
   // Class form
   const [classForm, setClassForm] = useState({ name: '', description: '', day_of_week: '1', start_time: '09:00', end_time: '10:00', instructor: '', is_mma: false, registration_url: '', max_capacity: '' });
   // Announcement form
