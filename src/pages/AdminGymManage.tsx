@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Pencil, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,8 @@ const AdminGymManage = () => {
   // Edit class
   const [editingClass, setEditingClass] = useState<PartneredGymClass | null>(null);
   const [editClassForm, setEditClassForm] = useState({ name: '', description: '', day_of_week: '1', start_time: '09:00', end_time: '10:00', instructor: '', is_mma: false, registration_url: '', max_capacity: '' });
+  // Location autofill
+  const [autofillLoading, setAutofillLoading] = useState(false);
 
   if (roleLoading || loading) return <LoadingState message="Loading..." fullScreen />;
   if (!isManager) return (
@@ -210,6 +212,54 @@ const AdminGymManage = () => {
     await fromTable('partnered_gym_locations').delete().eq('id', id);
     toast({ title: "Location Deleted" });
     refetch();
+  };
+
+  const handleAutofillLocations = async () => {
+    if (!gym?.name) return;
+    setAutofillLoading(true);
+    try {
+      // Search for the gym name via place-autocomplete
+      const { data: searchData, error: searchError } = await supabase.functions.invoke('place-autocomplete', {
+        body: { action: 'autocomplete', input: gym.name },
+      });
+      if (searchError || !searchData?.predictions?.length) {
+        toast({ title: "No Results", description: "No locations found for this gym name on Google Maps.", variant: "destructive" });
+        setAutofillLoading(false);
+        return;
+      }
+
+      const existingAddresses = new Set(locations.map(l => l.address.toLowerCase()));
+      let added = 0;
+
+      for (const prediction of searchData.predictions) {
+        // Geocode each prediction to get lat/lng
+        const { data: geoData } = await supabase.functions.invoke('place-autocomplete', {
+          body: { action: 'geocode', placeId: prediction.placeId },
+        });
+
+        const address = geoData?.formattedAddress || prediction.description;
+        if (existingAddresses.has(address.toLowerCase())) continue;
+
+        const { error } = await fromTable('partnered_gym_locations').insert({
+          gym_id: gymId,
+          name: prediction.mainText || gym.name,
+          address,
+          latitude: geoData?.latitude || null,
+          longitude: geoData?.longitude || null,
+        } as any);
+
+        if (!error) {
+          added++;
+          existingAddresses.add(address.toLowerCase());
+        }
+      }
+
+      toast({ title: added > 0 ? "Locations Added" : "No New Locations", description: added > 0 ? `${added} location(s) added from Google Maps.` : "All found locations already exist." });
+      if (added > 0) refetch();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to fetch locations from Google Maps.", variant: "destructive" });
+    }
+    setAutofillLoading(false);
   };
 
   const formatTime = (t: string) => {
@@ -414,7 +464,22 @@ const AdminGymManage = () => {
           {/* Locations */}
           <TabsContent value="locations" className="mt-6 space-y-4">
             <Card>
-              <CardHeader><CardTitle>Add Location</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Auto-Fill from Google Maps</CardTitle>
+                  <Button onClick={handleAutofillLocations} disabled={autofillLoading} variant="outline">
+                    {autofillLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MapPin className="w-4 h-4 mr-1" />}
+                    {autofillLoading ? 'Searching...' : 'Fetch Locations'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Searches Google Maps for "{gym?.name}" and adds matching locations automatically. Duplicates are skipped.</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Add Location Manually</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div><Label>Location Name *</Label><Input value={locForm.name} onChange={e => setLocForm(p => ({...p, name: e.target.value}))} /></div>
                 <div><Label>Address *</Label><Input value={locForm.address} onChange={e => setLocForm(p => ({...p, address: e.target.value}))} /></div>
