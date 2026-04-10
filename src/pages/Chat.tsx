@@ -183,9 +183,9 @@ const Chat = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="h-safe-top bg-card" />
       {/* Header */}
-      <header className="bg-card border-b p-4 sticky top-0 z-10">
+      <div className="h-safe-top bg-card sticky top-0 z-10" />
+      <header className="bg-card border-b p-4 sticky top-[env(safe-area-inset-top,0px)] z-10">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/messages')}>
             <ArrowLeft className="w-5 h-5" />
