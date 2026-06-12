@@ -271,7 +271,8 @@ const AdminGymManage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+      <div className="h-safe-top bg-background/95 sticky top-0 z-50" />
+      <header className="sticky top-[env(safe-area-inset-top,0px)] z-50 w-full border-b bg-background/95 backdrop-blur">
         <div className="flex h-14 items-center gap-4 px-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
