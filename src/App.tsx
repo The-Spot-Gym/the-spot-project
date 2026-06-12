@@ -26,6 +26,7 @@ import FriendRecommendations from "./pages/FriendRecommendations";
 import MyFriends from "./pages/MyFriends";
 import WorkoutPlans from "./pages/WorkoutPlans";
 import Privacy from "./pages/Privacy";
+import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
 import AdminGymManage from "./pages/AdminGymManage";
@@ -101,6 +102,7 @@ const AppContent = () => {
         <Route path="/my-friends" element={<MyFriends />} />
         <Route path="/workout-plans" element={<WorkoutPlans />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/email-confirmed" element={<EmailConfirmed />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/admin/partnered-gym/:gymId" element={<AdminGymManage />} />
         <Route path="/partnered-gym/:gymId" element={<PartneredGymPage />} />
