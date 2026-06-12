@@ -102,6 +102,7 @@ const AppContent = () => {
         <Route path="/my-friends" element={<MyFriends />} />
         <Route path="/workout-plans" element={<WorkoutPlans />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/email-confirmed" element={<EmailConfirmed />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/admin/partnered-gym/:gymId" element={<AdminGymManage />} />
         <Route path="/partnered-gym/:gymId" element={<PartneredGymPage />} />
