@@ -34,7 +34,9 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string, username: string, displayName?: string) => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
+      // Always send the confirmation link to the production web URL so the email
+      // actually gets confirmed (native app schemes can't be reached from a tapped email link).
+      const redirectUrl = 'https://the-spot-project.lovable.app/email-confirmed';
       
       const { error } = await supabase.auth.signUp({
         email,
