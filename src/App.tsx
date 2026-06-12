@@ -26,6 +26,7 @@ import FriendRecommendations from "./pages/FriendRecommendations";
 import MyFriends from "./pages/MyFriends";
 import WorkoutPlans from "./pages/WorkoutPlans";
 import Privacy from "./pages/Privacy";
+import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
 import AdminGymManage from "./pages/AdminGymManage";
