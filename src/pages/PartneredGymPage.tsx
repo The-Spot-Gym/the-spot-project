@@ -64,8 +64,8 @@ const PartneredGymPage = () => {
         ) : (
           <div className="h-48 md:h-64 w-full bg-gradient-to-br from-primary/80 to-primary/40" />
         )}
-        <div className="absolute left-4" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/80 backdrop-blur">
+        <div className="absolute left-4" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/80 backdrop-blur h-11 w-11">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </div>
