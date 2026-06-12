@@ -55,6 +55,14 @@ const PartneredGymPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Back button bar (above hero, below notch) */}
+      <div className="pt-safe sticky top-0 z-30 bg-background/80 backdrop-blur">
+        <div className="px-4 py-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8 !text-gray-900">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
       {/* Hero Header */}
       <div className="relative">
         {gym.image_url ? (
@@ -64,11 +72,6 @@ const PartneredGymPage = () => {
         ) : (
           <div className="h-48 md:h-64 w-full bg-gradient-to-br from-primary/80 to-primary/40" />
         )}
-        <div className="absolute left-6 z-20" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/80 backdrop-blur h-8 w-8 !text-gray-900">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 pl-6 text-white z-10 pointer-events-none">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="secondary" className="bg-primary text-primary-foreground">
