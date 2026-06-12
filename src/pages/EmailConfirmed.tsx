@@ -10,29 +10,30 @@ export default function EmailConfirmed() {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   useEffect(() => {
-    // Supabase auto-processes the token in the URL hash via detectSessionInUrl.
-    // We just wait briefly for the session to be established.
     const check = async () => {
-      // Give supabase-js a moment to process the hash
-      await new Promise((r) => setTimeout(r, 500));
+      // Check BOTH the query string and the hash for errors — Supabase returns
+      // them in the hash on the final redirect, but they may also appear as
+      // query params depending on the flow.
+      const search = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const errorDesc =
+        hashParams.get('error_description') || search.get('error_description');
+      const errorCode = hashParams.get('error_code') || search.get('error_code');
 
-      const hash = window.location.hash;
-      const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
-      const errorDesc = hashParams.get('error_description');
-
-      if (errorDesc) {
-        setErrorMsg(decodeURIComponent(errorDesc));
+      if (errorDesc || errorCode) {
+        const msg = decodeURIComponent((errorDesc || errorCode || '').replace(/\+/g, ' '));
+        setErrorMsg(
+          errorCode === 'otp_expired'
+            ? 'This confirmation link has expired. Please sign up again to get a new one.'
+            : msg
+        );
         setStatus('error');
         return;
       }
 
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setStatus('success');
-      } else {
-        // Even without a session in this browser, if the link was valid the email is now confirmed server-side.
-        setStatus('success');
-      }
+      // Give supabase-js a moment to process any tokens in the hash
+      await new Promise((r) => setTimeout(r, 500));
+      setStatus('success');
     };
     check();
   }, []);
